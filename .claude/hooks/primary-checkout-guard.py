@@ -50,7 +50,7 @@ target the guard can actually resolve.
 
 Escape hatch, deliberately explicit and documented in CLAUDE.md:
 
-    DECKARDII_ALLOW_PRIMARY_MUTATION=1
+    FRAMEWORK_ALLOW_PRIMARY_MUTATION=1
 
 Exit codes: 0 allow, 2 block (stderr is shown to the agent).
 """
@@ -64,7 +64,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-ESCAPE_HATCH = "DECKARDII_ALLOW_PRIMARY_MUTATION"
+ESCAPE_HATCH = "FRAMEWORK_ALLOW_PRIMARY_MUTATION"
 
 # Git subcommands that mutate history, the index-to-HEAD relationship, the working tree,
 # or the remote. `merge` and `checkout` are handled separately: both have sanctioned
@@ -415,8 +415,8 @@ def check_git(tokens: list[str], cwd: str) -> None:
                     f"creating a worktree inside the repository ({arg})",
                     "Worktrees live OUTSIDE the repository. One inside it eventually gets\n"
                     "committed, scanned by a tool that did not expect it, or deleted by a\n"
-                    "clean step. Use tools/dispatch-agent.sh, or set DECKARDII_WORKTREE_ROOT\n"
-                    "to a directory outside the repo.",
+                    "clean step. Use tools/dispatch-agent.sh. If its default location is unsuitable,\n"
+                    "set FRAMEWORK_WORKTREE_ROOT to a directory outside the repo.",
                 )
             break
     if verb == "worktree" and rest and rest[0] == "remove" and (

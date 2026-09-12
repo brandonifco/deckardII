@@ -30,7 +30,7 @@ class GuardTestCase(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls) -> None:
-        cls.tmp = Path(tempfile.mkdtemp(prefix="deckardii-guard-"))
+        cls.tmp = Path(tempfile.mkdtemp(prefix="framework-guard-"))
         cls.primary = cls.tmp / "primary"
         cls.primary.mkdir()
         run = lambda *a: subprocess.run(a, cwd=cls.primary, check=True, capture_output=True)
@@ -52,7 +52,7 @@ class GuardTestCase(unittest.TestCase):
         import os
 
         env = dict(os.environ)
-        env.pop("DECKARDII_ALLOW_PRIMARY_MUTATION", None)
+        env.pop("FRAMEWORK_ALLOW_PRIMARY_MUTATION", None)
         env.update(env_extra or {})
         return subprocess.run(
             [sys.executable, str(GUARD)],
@@ -279,14 +279,14 @@ class EscapeHatchTests(GuardTestCase):
     def test_escape_hatch_permits_sanctioned_primary_work(self):
         self.assertEqual(
             self.bash("git commit -m x", self.primary,
-                      env_extra={"DECKARDII_ALLOW_PRIMARY_MUTATION": "1"}),
+                      env_extra={"FRAMEWORK_ALLOW_PRIMARY_MUTATION": "1"}),
             ALLOW,
         )
 
     def test_escape_hatch_permits_writes(self):
         self.assertEqual(
             self.write(self.primary / "src" / "d.cs", self.primary,
-                       env_extra={"DECKARDII_ALLOW_PRIMARY_MUTATION": "1"}),
+                       env_extra={"FRAMEWORK_ALLOW_PRIMARY_MUTATION": "1"}),
             ALLOW,
         )
 

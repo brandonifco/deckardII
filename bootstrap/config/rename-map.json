@@ -62,19 +62,64 @@
       "replace": "this framework's `dotnet`"
     },
     {
+      "path": "tools/dispatch-agent.sh",
+      "search": "{{SOURCE_PREFIX_UPPER}}_WORKTREE_ROOT",
+      "replace": "FRAMEWORK_WORKTREE_ROOT"
+    },
+    {
+      "path": "tools/dispatch-agent.sh",
+      "search": "{{SOURCE_PREFIX_LOWER}}-worktrees",
+      "replace": "${REPO_NAME}-worktrees"
+    },
+    {
+      "path": "tools/dispatch-agent.sh",
+      "search": "cd \"$REPO_ROOT\"\n\nWORKTREE_ROOT=",
+      "replace": "cd \"$REPO_ROOT\"\n\nREPO_NAME=\"$(basename \"$REPO_ROOT\")\"\nWORKTREE_ROOT="
+    },
+    {
+      "path": "tools/dispatch-agent.sh",
+      "search": "Escalate to Brandon",
+      "replace": "Escalate to the orchestrator"
+    },
+    {
+      "path": "tools/tests/test_dispatch_agent.py",
+      "search": "{{SOURCE_PREFIX_UPPER}}_WORKTREE_ROOT",
+      "replace": "FRAMEWORK_WORKTREE_ROOT"
+    },
+    {
+      "path": "tools/tests/test_dispatch_agent.py",
+      "search": "{{SOURCE_PREFIX_LOWER}}-dispatch-",
+      "replace": "framework-dispatch-"
+    },
+    {
+      "path": "tools/tests/test_dispatch_agent.py",
+      "search": "rather than to {{SOURCE_PREFIX}} itself.",
+      "replace": "rather than to the framework repository itself."
+    },
+    {
       "path": ".claude/hooks/primary-checkout-guard.py",
       "search": "{{SOURCE_PREFIX_UPPER}}_",
-      "replace": "{{FRAMEWORK_PREFIX_UPPER}}_"
+      "replace": "FRAMEWORK_"
+    },
+    {
+      "path": ".claude/hooks/primary-checkout-guard.py",
+      "search": "clean step. Use tools/dispatch-agent.sh, or set FRAMEWORK_WORKTREE_ROOT\\n",
+      "replace": "clean step. Use tools/dispatch-agent.sh. If its default location is unsuitable,\\n"
+    },
+    {
+      "path": ".claude/hooks/primary-checkout-guard.py",
+      "search": "to a directory outside the repo.",
+      "replace": "set FRAMEWORK_WORKTREE_ROOT to a directory outside the repo."
     },
     {
       "path": "tools/tests/test_primary_checkout_guard.py",
       "search": "{{SOURCE_PREFIX_UPPER}}_",
-      "replace": "{{FRAMEWORK_PREFIX_UPPER}}_"
+      "replace": "FRAMEWORK_"
     },
     {
       "path": "tools/tests/test_primary_checkout_guard.py",
-      "search": "{{SOURCE_PREFIX_LOWER}}",
-      "replace": "{{FRAMEWORK_ID}}"
+      "search": "{{SOURCE_PREFIX_LOWER}}-guard-",
+      "replace": "framework-guard-"
     }
   ]
 }

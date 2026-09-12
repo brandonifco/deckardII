@@ -17,18 +17,19 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_ROOT"
 
-WORKTREE_ROOT="${DECKARD_WORKTREE_ROOT:-$HOME/deckard-worktrees}"
+REPO_NAME="$(basename "$REPO_ROOT")"
+WORKTREE_ROOT="${FRAMEWORK_WORKTREE_ROOT:-$HOME/${REPO_NAME}-worktrees}"
 
 # A worktree inside the repository eventually gets committed, scanned by a tool that did
 # not expect it, or deleted by a clean step. The rule was previously prose only, and
-# DECKARD_WORKTREE_ROOT could point anywhere.
+# FRAMEWORK_WORKTREE_ROOT could point anywhere.
 assert_worktree_root_is_outside_repo() {
   local resolved
   resolved="$(mkdir -p "$WORKTREE_ROOT" 2>/dev/null; cd "$WORKTREE_ROOT" 2>/dev/null && pwd -P)" || {
     printf 'error: cannot create worktree root: %s\n' "$WORKTREE_ROOT" >&2; exit 1; }
   case "$resolved/" in
     "$REPO_ROOT"/*)
-      printf 'error: DECKARD_WORKTREE_ROOT resolves inside the repository:\n' >&2
+      printf 'error: FRAMEWORK_WORKTREE_ROOT resolves inside the repository:\n' >&2
       printf '         %s\n       repo: %s\n\n' "$resolved" "$REPO_ROOT" >&2
       printf '       Worktrees must live outside the repo. Pick a path elsewhere.\n' >&2
       exit 1
@@ -119,7 +120,7 @@ do_create() {
   if [[ ",$labels," == *",state:needs-decision,"* ]]; then
     die "Issue #$issue is state:needs-decision and is not implementable.
        An implementation agent may not resolve the open question itself.
-       Escalate to Brandon; once decided, the answer is persisted and the label changes."
+       Escalate to the orchestrator; once decided, the answer is persisted and the label changes."
   fi
   if [[ ",$labels," == *",state:blocked,"* ]]; then
     die "Issue #$issue is state:blocked. Resolve the blocker first."

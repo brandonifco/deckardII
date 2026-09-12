@@ -19,8 +19,8 @@ SCRIPT = ROOT / "tools" / "dispatch-agent.sh"
 class DispatchAgentTests(unittest.TestCase):
     def setUp(self) -> None:
         # A fixture repository with its own copy of the script, so REPO_ROOT resolves to
-        # the fixture rather than to Deckard itself.
-        self.tmp = Path(tempfile.mkdtemp(prefix="deckard-dispatch-"))
+        # the fixture rather than to the framework repository itself.
+        self.tmp = Path(tempfile.mkdtemp(prefix="framework-dispatch-"))
         self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
         self.repo = self.tmp / "repo"
         (self.repo / "tools").mkdir(parents=True)
@@ -32,7 +32,7 @@ class DispatchAgentTests(unittest.TestCase):
 
         env = dict(os.environ)
         if worktree_root is not None:
-            env["DECKARD_WORKTREE_ROOT"] = worktree_root
+            env["FRAMEWORK_WORKTREE_ROOT"] = worktree_root
         return subprocess.run(
             ["bash", str(self.repo / "tools" / "dispatch-agent.sh"), *args],
             cwd=self.repo, capture_output=True, text=True, env=env, check=False,

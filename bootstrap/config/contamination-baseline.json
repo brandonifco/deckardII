@@ -53,11 +53,6 @@
       "count": 3
     },
     {
-      "path": "tools/dispatch-agent.sh",
-      "pattern": "source-prefix-lower",
-      "count": 1
-    },
-    {
       "path": "tools/new-issue.sh",
       "pattern": "domain-sr6",
       "count": 2
@@ -130,16 +125,6 @@
     {
       "path": "tools/source-slice.py",
       "pattern": "source-prefix-upper",
-      "count": 1
-    },
-    {
-      "path": "tools/tests/test_dispatch_agent.py",
-      "pattern": "source-prefix-exact",
-      "count": 1
-    },
-    {
-      "path": "tools/tests/test_dispatch_agent.py",
-      "pattern": "source-prefix-lower",
       "count": 1
     },
     {
