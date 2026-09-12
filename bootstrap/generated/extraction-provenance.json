@@ -26,7 +26,7 @@
     "inputs": [
       {
         "path": "bootstrap/bootstrap-framework.sh",
-        "sha256": "d61effc0758ec336cc6ea21b258481db239c232951918e77983f46d84d2af85d"
+        "sha256": "ed023fa4916f53014b8e6ec17667867df23ec8e07c68190d9390948c9346d522"
       },
       {
         "path": "bootstrap/config/contamination-baseline.json",
@@ -38,11 +38,11 @@
       },
       {
         "path": "bootstrap/config/copy-manifest.txt",
-        "sha256": "4ebf385bece1f01b1a285eafe422b88fa62fb389f9ca4f533c41b2f1ec701192"
+        "sha256": "ea84a2382e28610af0115631042469c3ce72c9b61b5fe532661e6f0c6b3d2d46"
       },
       {
         "path": "bootstrap/config/exclusion-manifest.txt",
-        "sha256": "bac763d3b1640bf0d1a802b088fccd9cbecf95161fa1cc65e05a5e3bae61a480"
+        "sha256": "2d3356c3da3e01451e2df6718e55335505ac9c48cd79a65094a7f50ee910ae9f"
       },
       {
         "path": "bootstrap/config/path-map.json",
@@ -50,7 +50,7 @@
       },
       {
         "path": "bootstrap/config/rename-map.json",
-        "sha256": "48241c98f4c00182f405d5da7ccde2917a7c72115232f3d2bedc805bdc030d25"
+        "sha256": "a50b954fb948b758b3cd4b63ed588089308fb8340e7d8933e14297eeccb04de9"
       },
       {
         "path": "bootstrap/config/structure-manifest.txt",

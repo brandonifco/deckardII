@@ -27,3 +27,7 @@ README.md
 CLAUDE.md
 AGENTS.md
 NOTICE
+src/Deckard.Core/AssemblyMarker.cs
+src/Deckard.Core/Dice
+tests/Deckard.Core.Tests/ArchitectureTests.cs
+tests/Deckard.Core.Tests/Dice

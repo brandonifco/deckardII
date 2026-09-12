@@ -14,9 +14,9 @@
     "tree": "e8fb547b6724710b8f3897174defd9356a0e1694"
   },
   "extraction": {
-    "approvedManifestEntries": 27,
-    "approvedTrackedFiles": 40,
-    "mechanicallyTransformedFiles": 29,
+    "approvedManifestEntries": 39,
+    "approvedTrackedFiles": 68,
+    "mechanicallyTransformedFiles": 56,
     "declaredPathMappings": 6,
     "declaredStructureDirectories": 5
   },

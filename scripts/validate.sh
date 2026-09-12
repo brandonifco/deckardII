@@ -34,7 +34,7 @@ export DOTNET_NOLOGO=1
 export DOTNET_CLI_TELEMETRY_OPTOUT=1
 export DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1
 
-SOLUTION="Deckard.slnx"
+SOLUTION="tests/DeckardII.Core.Tests/DeckardII.Core.Tests.csproj"
 FAILED=0
 STEP=0
 
