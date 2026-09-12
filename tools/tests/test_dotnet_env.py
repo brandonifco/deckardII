@@ -27,7 +27,7 @@ def source_and_report(script: Path, cwd: Path) -> subprocess.CompletedProcess:
     probe = (
         f"source {str(script)!r}\n"
         'printf "%s\\0%s\\0%s\\0" '
-        '"${DECKARDII_DOTNET_SOURCE-}" "${DECKARDII_DOTNET_HOME-}" "${PATH-}"\n'
+        '"${FRAMEWORK_DOTNET_SOURCE-}" "${FRAMEWORK_DOTNET_HOME-}" "${PATH-}"\n'
     )
     return subprocess.run(
         ["bash", "-c", probe], cwd=cwd, capture_output=True, text=True, check=False,
@@ -43,7 +43,7 @@ class RepoLocalDotnetTests(unittest.TestCase):
     """Case 1: a .dotnet next to this checkout's own scripts/ is chosen."""
 
     def setUp(self) -> None:
-        self.tmp = Path(tempfile.mkdtemp(prefix="deckardii-dotnet-env-"))
+        self.tmp = Path(tempfile.mkdtemp(prefix="framework-dotnet-env-"))
         self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
         (self.tmp / "scripts" / "lib").mkdir(parents=True)
         shutil.copy(LIB, self.tmp / "scripts" / "lib" / "dotnet-env.sh")
@@ -75,7 +75,7 @@ class NoDotnetAnywhereTests(unittest.TestCase):
     """
 
     def setUp(self) -> None:
-        self.tmp = Path(tempfile.mkdtemp(prefix="deckardii-dotnet-env-"))
+        self.tmp = Path(tempfile.mkdtemp(prefix="framework-dotnet-env-"))
         self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
         (self.tmp / "scripts" / "lib").mkdir(parents=True)
         shutil.copy(LIB, self.tmp / "scripts" / "lib" / "dotnet-env.sh")
@@ -101,7 +101,7 @@ class WorktreeFallbackTests(unittest.TestCase):
     """
 
     def setUp(self) -> None:
-        self.tmp = Path(tempfile.mkdtemp(prefix="deckardii-dotnet-env-"))
+        self.tmp = Path(tempfile.mkdtemp(prefix="framework-dotnet-env-"))
         self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
         self.primary = self.tmp / "primary"
         self.primary.mkdir()

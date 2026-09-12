@@ -21,10 +21,10 @@ source "$REPO_ROOT/scripts/lib/dotnet-env.sh"
 # source.local.json is gitignored and lives in the primary checkout; resolving it
 # against REPO_ROOT (this checkout's own root) made it invisible from every worktree --
 # the one place CLAUDE.md requires implementation to happen (#57). dotnet-env.sh, just
-# sourced above, already defines deckard_primary_checkout_root for this exact purpose
+# sourced above, already defines framework_primary_checkout_root for this exact purpose
 # (its own .dotnet/ lookup has the identical primary-checkout-vs-worktree shape); reuse
 # it rather than a third copy of the same git-common-dir logic in this file too.
-PRIMARY_ROOT="$(deckard_primary_checkout_root "$REPO_ROOT")" || PRIMARY_ROOT="$REPO_ROOT"
+PRIMARY_ROOT="$(framework_primary_checkout_root "$REPO_ROOT")" || PRIMARY_ROOT="$REPO_ROOT"
 
 if [[ -t 1 ]]; then BOLD=$'\033[1m'; RED=$'\033[31m'; YEL=$'\033[33m'; GRN=$'\033[32m'; OFF=$'\033[0m'
 else BOLD=""; RED=""; YEL=""; GRN=""; OFF=""; fi
@@ -55,9 +55,9 @@ if command -v gh >/dev/null 2>&1; then
   fi
 else bad "gh" "not found"; hint "https://cli.github.com"; fi
 
-case "$DECKARD_DOTNET_SOURCE" in
+case "$FRAMEWORK_DOTNET_SOURCE" in
   repo-local)        dotnet_origin="repo-local .dotnet/" ;;
-  primary-checkout)  dotnet_origin="primary checkout's .dotnet/ ($DECKARD_DOTNET_HOME)" ;;
+  primary-checkout)  dotnet_origin="primary checkout's .dotnet/ ($FRAMEWORK_DOTNET_HOME)" ;;
   *)                 dotnet_origin="PATH" ;;
 esac
 

@@ -16,29 +16,51 @@
       "search": "<RepositoryUrl>https://github.com/{{SOURCE_REPO}}</RepositoryUrl>",
       "replace": "<RepositoryUrl>https://github.com/{{TARGET_REPO}}</RepositoryUrl>"
     },
-
     {
       "path": "scripts/lib/dotnet-env.sh",
       "search": "{{SOURCE_PREFIX_UPPER}}_",
-      "replace": "{{FRAMEWORK_PREFIX_UPPER}}_"
+      "replace": "FRAMEWORK_"
     },
     {
       "path": "scripts/lib/dotnet-env.sh",
       "search": "{{SOURCE_PREFIX_LOWER}}_",
-      "replace": "{{FRAMEWORK_PREFIX_LOWER}}_"
+      "replace": "framework_"
     },
-
     {
       "path": "tools/tests/test_dotnet_env.py",
       "search": "{{SOURCE_PREFIX_UPPER}}_",
-      "replace": "{{FRAMEWORK_PREFIX_UPPER}}_"
+      "replace": "FRAMEWORK_"
     },
     {
       "path": "tools/tests/test_dotnet_env.py",
       "search": "{{SOURCE_PREFIX_LOWER}}-",
-      "replace": "{{FRAMEWORK_ID}}-"
+      "replace": "framework-"
     },
-
+    {
+      "path": "scripts/doctor.sh",
+      "search": "{{SOURCE_PREFIX_LOWER}}_primary_checkout_root",
+      "replace": "framework_primary_checkout_root"
+    },
+    {
+      "path": "scripts/doctor.sh",
+      "search": "{{SOURCE_PREFIX_UPPER}}_DOTNET_SOURCE",
+      "replace": "FRAMEWORK_DOTNET_SOURCE"
+    },
+    {
+      "path": "scripts/doctor.sh",
+      "search": "{{SOURCE_PREFIX_UPPER}}_DOTNET_HOME",
+      "replace": "FRAMEWORK_DOTNET_HOME"
+    },
+    {
+      "path": "scripts/bootstrap-dotnet.sh",
+      "search": "{{SOURCE_PREFIX_LOWER}}_primary_checkout_root",
+      "replace": "framework_primary_checkout_root"
+    },
+    {
+      "path": "scripts/bootstrap-dotnet.sh",
+      "search": "{{SOURCE_PREFIX}}'s `dotnet`",
+      "replace": "this framework's `dotnet`"
+    },
     {
       "path": ".claude/hooks/primary-checkout-guard.py",
       "search": "{{SOURCE_PREFIX_UPPER}}_",

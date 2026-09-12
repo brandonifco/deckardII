@@ -14,7 +14,7 @@
 #   - one install has to serve every worktree tools/dispatch-agent.sh creates, since all
 #     implementation happens in a worktree and a worktree has no .dotnet of its own.
 # The costs are accepted knowingly, not hidden: .dotnet/ is large, `git clean -xfd`
-# would delete it, and Deckard's `dotnet` differs from the one on PATH. Both are written
+# would delete it, and this framework's `dotnet` differs from the one on PATH. Both are written
 # down in README.md so the next session does not have to rediscover them.
 #
 # It does NOT edit a shell profile, and will not tell you to. scripts/doctor.sh states
@@ -46,7 +46,7 @@ PINNED="$(python3 -c 'import json;print(json.load(open("global.json"))["sdk"]["v
 # Install into the PRIMARY checkout even when invoked from a worktree: every dispatched
 # agent needs the same answer, and only one download should ever happen. This reuses
 # scripts/lib/dotnet-env.sh's own primary-root lookup rather than reimplementing it.
-PRIMARY_ROOT="$(deckard_primary_checkout_root "$REPO_ROOT")" \
+PRIMARY_ROOT="$(framework_primary_checkout_root "$REPO_ROOT")" \
   || die "not inside a git repository: $REPO_ROOT"
 TARGET_DIR="$PRIMARY_ROOT/.dotnet"
 

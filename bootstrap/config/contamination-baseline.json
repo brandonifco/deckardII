@@ -43,11 +43,6 @@
       "count": 1
     },
     {
-      "path": "scripts/bootstrap-dotnet.sh",
-      "pattern": "source-prefix-exact",
-      "count": 1
-    },
-    {
       "path": "scripts/doctor.sh",
       "pattern": "source-prefix-exact",
       "count": 3

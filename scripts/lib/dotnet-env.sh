@@ -18,8 +18,8 @@
 #
 # Must be SOURCED, not executed: it has to run inside the caller's shell to change the
 # caller's PATH. On return it sets, for doctor.sh to report:
-#   DECKARDII_DOTNET_SOURCE   "repo-local" | "primary-checkout" | "path"
-#   DECKARDII_DOTNET_HOME     the .dotnet directory used, empty when DECKARDII_DOTNET_SOURCE=path
+#   FRAMEWORK_DOTNET_SOURCE   "repo-local" | "primary-checkout" | "path"
+#   FRAMEWORK_DOTNET_HOME     the .dotnet directory used, empty when FRAMEWORK_DOTNET_SOURCE=path
 #
 # This file changes nothing when case 3 applies -- no PATH edit, no export -- which is
 # the same "diagnose, do not repair" contract doctor.sh carries. It only ever prepends
@@ -33,7 +33,7 @@
 # That output can be relative to wherever git happened to run rather than to $1, so it
 # is resolved against $1 explicitly rather than against the process's own cwd -- the
 # exact bug .claude/hooks/primary-checkout-guard.py documents fixing.
-deckardii_primary_checkout_root() {
+framework_primary_checkout_root() {
   local from="$1" common
   common="$(git -C "$from" rev-parse --git-common-dir 2>/dev/null)" || return 1
   case "$common" in
@@ -49,25 +49,25 @@ deckardii_primary_checkout_root() {
 # the worktree when sourced from one. Not the process cwd: validate.sh and doctor.sh
 # already cd to their own repo root before sourcing this, but resolving from our own
 # path keeps that assumption from being a second place this logic could drift from.
-_deckardii_repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+_framework_repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 
-DECKARDII_DOTNET_SOURCE="path"
-DECKARDII_DOTNET_HOME=""
+FRAMEWORK_DOTNET_SOURCE="path"
+FRAMEWORK_DOTNET_HOME=""
 
-if [[ -d "$_deckardii_repo_root/.dotnet" ]]; then
-  DECKARDII_DOTNET_SOURCE="repo-local"
-  DECKARDII_DOTNET_HOME="$_deckardii_repo_root/.dotnet"
+if [[ -d "$_framework_repo_root/.dotnet" ]]; then
+  FRAMEWORK_DOTNET_SOURCE="repo-local"
+  FRAMEWORK_DOTNET_HOME="$_framework_repo_root/.dotnet"
 else
-  _deckardii_primary_root="$(deckardii_primary_checkout_root "$_deckardii_repo_root")" || _deckardii_primary_root=""
-  if [[ -n "$_deckardii_primary_root" && -d "$_deckardii_primary_root/.dotnet" ]]; then
-    DECKARDII_DOTNET_SOURCE="primary-checkout"
-    DECKARDII_DOTNET_HOME="$_deckardii_primary_root/.dotnet"
+  _framework_primary_root="$(framework_primary_checkout_root "$_framework_repo_root")" || _framework_primary_root=""
+  if [[ -n "$_framework_primary_root" && -d "$_framework_primary_root/.dotnet" ]]; then
+    FRAMEWORK_DOTNET_SOURCE="primary-checkout"
+    FRAMEWORK_DOTNET_HOME="$_framework_primary_root/.dotnet"
   fi
 fi
 
-if [[ "$DECKARDII_DOTNET_SOURCE" != "path" ]]; then
-  export DOTNET_ROOT="$DECKARDII_DOTNET_HOME"
-  export PATH="$DECKARDII_DOTNET_HOME:$PATH"
+if [[ "$FRAMEWORK_DOTNET_SOURCE" != "path" ]]; then
+  export DOTNET_ROOT="$FRAMEWORK_DOTNET_HOME"
+  export PATH="$FRAMEWORK_DOTNET_HOME:$PATH"
 fi
 
-unset _deckardii_repo_root _deckardii_primary_root
+unset _framework_repo_root _framework_primary_root
