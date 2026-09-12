@@ -44,6 +44,7 @@ scripts/lib
 
 tools/dispatch-agent.sh
 tools/new-issue.sh
+tools/lib
 tools/pr-policy.py
 tools/record-verdict.sh
 tools/repo-checks.py

@@ -28,6 +28,17 @@ import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
+
+_RULES_CONFIG_TMP = tempfile.TemporaryDirectory(prefix="framework-gate-rules-config-")
+_RULES_CONFIG = Path(_RULES_CONFIG_TMP.name) / "rules-surface-paths.txt"
+_RULES_CONFIG.write_text(
+    "src/Fixture.Rules/\n"
+    "src/Fixture.Data/\n"
+    "tests/Fixture.Rules.Tests/\n"
+    "tests/Fixture.Data.Tests/\n",
+    encoding="utf-8",
+)
+os.environ["FRAMEWORK_RULES_SURFACE_CONFIG"] = str(_RULES_CONFIG)
 SCRIPT = ROOT / "tools" / "rules-conformance-gate.py"
 PR_POLICY = ROOT / "tools" / "pr-policy.py"
 RULES_SURFACE_LIB = ROOT / "tools" / "lib" / "rules-surface.sh"
@@ -41,7 +52,7 @@ _spec.loader.exec_module(gate)
 IN_HOUSE = gate.IN_HOUSE_CONTEXT
 CODEX, GEMINI, IN_HOUSE_INDEPENDENT = gate.INDEPENDENT_CONTEXTS
 
-RULES_FILE = "M\tsrc/Deckard.Rules/DiceTest.cs\n"
+RULES_FILE = "M\tsrc/Fixture.Rules/DiceTest.cs\n"
 DOCS_FILE = "M\tdocs/roadmap.md\n"
 
 GOOD_PASS_DESC = "PASS bodySha256=" + "a" * 64 + " pages=44-47"
@@ -67,32 +78,32 @@ class RulesSurfaceTouchedTests(unittest.TestCase):
         self.assertTrue(gate.rules_surface_touched(RULES_FILE))
 
     def test_data_project_counts(self):
-        self.assertTrue(gate.rules_surface_touched("M\tsrc/Deckard.Data/Skills.json\n"))
+        self.assertTrue(gate.rules_surface_touched("M\tsrc/Fixture.Data/Skills.json\n"))
 
     def test_rules_tests_count(self):
-        self.assertTrue(gate.rules_surface_touched("M\ttests/Deckard.Rules.Tests/T.cs\n"))
+        self.assertTrue(gate.rules_surface_touched("M\ttests/Fixture.Rules.Tests/T.cs\n"))
 
     def test_source_manifest_counts(self):
         self.assertTrue(gate.rules_surface_touched("M\t.github/source-manifest.json\n"))
 
     def test_core_only_change_does_not_count(self):
-        self.assertFalse(gate.rules_surface_touched("M\tsrc/Deckard.Core/Pcg.cs\n"))
+        self.assertFalse(gate.rules_surface_touched("M\tsrc/Fixture.Core/Pcg.cs\n"))
 
     def test_rename_into_rules_surface_counts(self):
         self.assertTrue(
-            gate.rules_surface_touched("R100\ttools/foo.py\tsrc/Deckard.Rules/Foo.cs\n")
+            gate.rules_surface_touched("R100\ttools/foo.py\tsrc/Fixture.Rules/Foo.cs\n")
         )
 
     def test_rename_out_of_rules_surface_counts(self):
         self.assertTrue(
-            gate.rules_surface_touched("R100\tsrc/Deckard.Rules/Foo.cs\ttools/foo.py\n")
+            gate.rules_surface_touched("R100\tsrc/Fixture.Rules/Foo.cs\ttools/foo.py\n")
         )
 
 
 class RulesSurfaceLockFileExclusionTests(unittest.TestCase):
     """Issue #86: a directory match alone is not enough. NuGet's
     RestorePackagesWithLockFile (#43) writes packages.lock.json beside each project file
-    it locks, landing it under src/Deckard.Rules/, src/Deckard.Data/ and their test
+    it locks, landing it under src/Fixture.Rules/, src/Fixture.Data/ and their test
     projects -- a hash manifest of transitive package versions, not rules content, and
     one that can never carry a printed-page citation. This is the exact diff shape that
     blocked PR #82.
@@ -100,22 +111,22 @@ class RulesSurfaceLockFileExclusionTests(unittest.TestCase):
 
     def test_rules_lock_file_alone_is_not_a_rules_surface(self):
         self.assertFalse(
-            gate.rules_surface_touched("M\tsrc/Deckard.Rules/packages.lock.json\n")
+            gate.rules_surface_touched("M\tsrc/Fixture.Rules/packages.lock.json\n")
         )
 
     def test_data_lock_file_alone_is_not_a_rules_surface(self):
         self.assertFalse(
-            gate.rules_surface_touched("M\tsrc/Deckard.Data/packages.lock.json\n")
+            gate.rules_surface_touched("M\tsrc/Fixture.Data/packages.lock.json\n")
         )
 
     def test_rules_tests_lock_file_alone_is_not_a_rules_surface(self):
         self.assertFalse(
-            gate.rules_surface_touched("M\ttests/Deckard.Rules.Tests/packages.lock.json\n")
+            gate.rules_surface_touched("M\ttests/Fixture.Rules.Tests/packages.lock.json\n")
         )
 
     def test_data_tests_lock_file_alone_is_not_a_rules_surface(self):
         self.assertFalse(
-            gate.rules_surface_touched("M\ttests/Deckard.Data.Tests/packages.lock.json\n")
+            gate.rules_surface_touched("M\ttests/Fixture.Data.Tests/packages.lock.json\n")
         )
 
     def test_dicepool_roll_still_counts(self):
@@ -123,7 +134,7 @@ class RulesSurfaceLockFileExclusionTests(unittest.TestCase):
         trip the gate -- the exclusion is by exact basename, not by directory."""
         self.assertTrue(
             gate.rules_surface_touched(
-                "M\tsrc/Deckard.Rules/Resolution/DicePoolRoll.cs\n"
+                "M\tsrc/Fixture.Rules/Resolution/DicePoolRoll.cs\n"
             )
         )
 
@@ -137,8 +148,8 @@ class RulesSurfaceLockFileExclusionTests(unittest.TestCase):
         change in the same `git diff --name-status` output must still trip the gate."""
         self.assertTrue(
             gate.rules_surface_touched(
-                "M\tsrc/Deckard.Rules/packages.lock.json\n"
-                "M\tsrc/Deckard.Rules/Resolution/DicePoolRoll.cs\n"
+                "M\tsrc/Fixture.Rules/packages.lock.json\n"
+                "M\tsrc/Fixture.Rules/Resolution/DicePoolRoll.cs\n"
             )
         )
 
@@ -147,7 +158,7 @@ class RulesSurfaceLockFileExclusionTests(unittest.TestCase):
         check -- excluding by basename must not accidentally blind the rename handling."""
         self.assertTrue(
             gate.rules_surface_touched(
-                "R100\ttools/Foo.cs\tsrc/Deckard.Rules/Resolution/Foo.cs\n"
+                "R100\ttools/Foo.cs\tsrc/Fixture.Rules/Resolution/Foo.cs\n"
             )
         )
 
@@ -156,7 +167,7 @@ class RulesSurfaceLockFileExclusionTests(unittest.TestCase):
         basename is still what gets excluded, whether the file is new or moved."""
         self.assertFalse(
             gate.rules_surface_touched(
-                "R100\ttools/packages.lock.json\tsrc/Deckard.Rules/packages.lock.json\n"
+                "R100\ttools/packages.lock.json\tsrc/Fixture.Rules/packages.lock.json\n"
             )
         )
 
@@ -176,7 +187,7 @@ class RulesSurfaceTouchedFailureTests(unittest.TestCase):
     def setUp(self):
         self.original_lib = gate.RULES_SURFACE_LIB
         self.original_timeout = gate.TOUCHED_TIMEOUT_SECONDS
-        self.tmpdir = tempfile.mkdtemp(prefix="deckard-gate-rules-surface-broken-")
+        self.tmpdir = tempfile.mkdtemp(prefix="framework-gate-rules-surface-broken-")
         self.addCleanup(shutil.rmtree, self.tmpdir, ignore_errors=True)
         self.addCleanup(setattr, gate, "RULES_SURFACE_LIB", self.original_lib)
         self.addCleanup(setattr, gate, "TOUCHED_TIMEOUT_SECONDS", self.original_timeout)
@@ -315,11 +326,11 @@ class EvaluateTests(unittest.TestCase):
 
     def test_a_generic_independent_context_is_not_accepted(self):
         """The vendor-naming requirement (Issue #83): a collapsed, unnamed
-        'deckard-verdict/independent' context must not satisfy the gate -- only the
+        'rules-verdict/independent' context must not satisfy the gate -- only the
         three explicitly named contexts in INDEPENDENT_CONTEXTS may."""
         result = gate.evaluate(
             RULES_FILE, ["risk:rules-conformance"],
-            [status(IN_HOUSE), status("deckard-verdict/independent")],
+            [status(IN_HOUSE), status("rules-verdict/independent")],
         )
         self.assertFalse(result.passed)
 
@@ -395,7 +406,7 @@ class GateCliTests(unittest.TestCase):
     PATH -- never the real one. Mirrors test_review_packet.py's fixture style."""
 
     def setUp(self) -> None:
-        self.tmp = Path(tempfile.mkdtemp(prefix="deckard-rules-gate-"))
+        self.tmp = Path(tempfile.mkdtemp(prefix="framework-rules-gate-"))
         self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
         self.repo = self.tmp / "repo"
         self._init_repo()
@@ -417,11 +428,11 @@ class GateCliTests(unittest.TestCase):
         shutil.copy(RULES_SURFACE_LIB, self.repo / "tools" / "lib" / "rules-surface.sh")
         self._run("git", "init", "-q", "-b", "main")
         self._run("git", "config", "user.email", "test@example.com")
-        self._run("git", "config", "user.name", "Deckard Test")
+        self._run("git", "config", "user.name", "Framework Test")
         (self.repo / "docs").mkdir()
         (self.repo / "docs" / "existing.md").write_text("hello\n", encoding="utf-8")
-        (self.repo / "src" / "Deckard.Rules").mkdir(parents=True)
-        (self.repo / "src" / "Deckard.Rules" / "Existing.cs").write_text("// x\n", encoding="utf-8")
+        (self.repo / "src" / "Fixture.Rules").mkdir(parents=True)
+        (self.repo / "src" / "Fixture.Rules" / "Existing.cs").write_text("// x\n", encoding="utf-8")
         self.base_sha = self._commit("initial")
 
     def _branch_touching(self, name: str, relpath: str, content: str) -> str:
@@ -519,7 +530,7 @@ exit 1
 
     def test_rules_pr_with_no_verdict_is_blocked(self):
         self.head_sha = self._branch_touching(
-            "rules-pr", "src/Deckard.Rules/New.cs", "// new\n"
+            "rules-pr", "src/Fixture.Rules/New.cs", "// new\n"
         )
         result = self.run_cli("--pr", "9", issue_labels=["state:ready"], statuses=[])
         self.assertEqual(result.returncode, 1, result.stdout)
@@ -527,7 +538,7 @@ exit 1
 
     def test_rules_pr_with_a_recorded_verdict_passes(self):
         self.head_sha = self._branch_touching(
-            "rules-pr-ok", "src/Deckard.Rules/New.cs", "// new\n"
+            "rules-pr-ok", "src/Fixture.Rules/New.cs", "// new\n"
         )
         result = self.run_cli(
             "--pr", "9", issue_labels=["state:ready"], statuses=[status(IN_HOUSE)]
@@ -540,7 +551,7 @@ exit 1
         combined-status lookup is keyed to THIS head SHA -- there is nothing to
         'invalidate' because a status for a different SHA was never fetched at all."""
         self.head_sha = self._branch_touching(
-            "rules-pr-amended", "src/Deckard.Rules/New.cs", "// v2\n"
+            "rules-pr-amended", "src/Fixture.Rules/New.cs", "// v2\n"
         )
         # Simulate "amended": statuses list is empty for the (new) head, as it would be
         # for a genuinely new commit the old verdict never covered.
@@ -549,7 +560,7 @@ exit 1
 
     def test_risk_labelled_issue_needs_the_independent_verdict_too(self):
         self.head_sha = self._branch_touching(
-            "risk-pr", "src/Deckard.Rules/New.cs", "// new\n"
+            "risk-pr", "src/Fixture.Rules/New.cs", "// new\n"
         )
         only_in_house = self.run_cli(
             "--pr", "9", issue_labels=["risk:rules-conformance"], statuses=[status(IN_HOUSE)]
@@ -608,7 +619,7 @@ exit 1
     def test_no_cli_test_in_this_module_can_reach_real_gh(self):
         """Prove the containment rather than asserting it in a docstring (Issue #28)."""
         self.head_sha = self._branch_touching(
-            "airtight-pr", "src/Deckard.Rules/New.cs", "// new\n"
+            "airtight-pr", "src/Fixture.Rules/New.cs", "// new\n"
         )
         result = self.run_cli(
             "--pr", "9", issue_labels=["state:ready"], statuses=[status(IN_HOUSE)]
@@ -619,7 +630,7 @@ exit 1
         # was reachable at all.
         calls = self.gh_calls()
         self.assertTrue(calls)
-        self.assertNotIn("brandonifco", " ".join(calls))
+        self.assertNotIn("example-user", " ".join(calls))
 
 
 if __name__ == "__main__":

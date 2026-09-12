@@ -25,6 +25,17 @@ import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
+
+_RULES_CONFIG_TMP = tempfile.TemporaryDirectory(prefix="framework-review-rules-config-")
+_RULES_CONFIG = Path(_RULES_CONFIG_TMP.name) / "rules-surface-paths.txt"
+_RULES_CONFIG.write_text(
+    "src/Fixture.Rules/\n"
+    "src/Fixture.Data/\n"
+    "tests/Fixture.Rules.Tests/\n"
+    "tests/Fixture.Data.Tests/\n",
+    encoding="utf-8",
+)
+os.environ["FRAMEWORK_RULES_SURFACE_CONFIG"] = str(_RULES_CONFIG)
 SCRIPT = ROOT / "tools" / "review-packet.sh"
 RULES_SURFACE_LIB = ROOT / "tools" / "lib" / "rules-surface.sh"
 
@@ -71,7 +82,7 @@ Implement a mechanic.
 
 ## Source
 
-SR6 Core / Tests / printed p. 44 / PDF p. 45
+fixture-core / Tests / printed p. 44 / PDF p. 45
 
 ## Acceptance criteria
 
@@ -85,7 +96,7 @@ Tests pass.
 
 class ReviewPacketTests(unittest.TestCase):
     def setUp(self) -> None:
-        self.tmp = Path(tempfile.mkdtemp(prefix="deckard-review-packet-"))
+        self.tmp = Path(tempfile.mkdtemp(prefix="framework-review-packet-"))
         self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
         self.repo = self.tmp / "repo"
         self._init_repo()
@@ -106,7 +117,7 @@ class ReviewPacketTests(unittest.TestCase):
         shutil.copy(RULES_SURFACE_LIB, self.repo / "tools" / "lib" / "rules-surface.sh")
         self._run("git", "init", "-q", "-b", "main")
         self._run("git", "config", "user.email", "test@example.com")
-        self._run("git", "config", "user.name", "Deckard Test")
+        self._run("git", "config", "user.name", "Framework Test")
 
         decisions = self.repo / "docs" / "decisions"
         decisions.mkdir(parents=True)
@@ -375,7 +386,7 @@ class ReviewPacketTests(unittest.TestCase):
         result = self.run_script("--issue", "1", "--branch", "feature", "--base", "main",
                                   body=RULES_BODY)
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn("SR6 Core / Tests / printed p. 44 / PDF p. 45", result.stdout)
+        self.assertIn("fixture-core / Tests / printed p. 44 / PDF p. 45", result.stdout)
 
     def test_non_rules_change_does_not_ask_for_rules_conformance(self):
         self._branch_with_change("feature", "src/existing.txt", "changed\n")
@@ -386,7 +397,7 @@ class ReviewPacketTests(unittest.TestCase):
         self.assertNotIn("rules-conformance review", result.stdout)
 
     def test_rules_change_asks_for_rules_conformance_and_independent_verdict(self):
-        self._branch_with_change("feature", "src/Deckard.Rules/Glitches.cs",
+        self._branch_with_change("feature", "src/Fixture.Rules/Glitches.cs",
                                   "// a rule\n")
         result = self.run_script("--issue", "1", "--branch", "feature", "--base", "main",
                                   body=RULES_BODY)
@@ -396,13 +407,13 @@ class ReviewPacketTests(unittest.TestCase):
         self.assertIn("Independent verdict review", result.stdout)
 
     def test_modification_within_rules_path_is_detected(self):
-        """Regression table row 1 (a plain `M` inside src/Deckard.Rules/) was already
+        """Regression table row 1 (a plain `M` inside src/Fixture.Rules/) was already
         detected before the rename fix below -- kept as the baseline the other two rows
         are judged against."""
-        (self.repo / "src" / "Deckard.Rules").mkdir(parents=True, exist_ok=True)
-        (self.repo / "src" / "Deckard.Rules" / "Foo.cs").write_text("// v1\n", encoding="utf-8")
+        (self.repo / "src" / "Fixture.Rules").mkdir(parents=True, exist_ok=True)
+        (self.repo / "src" / "Fixture.Rules" / "Foo.cs").write_text("// v1\n", encoding="utf-8")
         self._commit("add Foo.cs under Rules")
-        self._branch_with_change("feature", "src/Deckard.Rules/Foo.cs", "// v2\n")
+        self._branch_with_change("feature", "src/Fixture.Rules/Foo.cs", "// v2\n")
         result = self.run_script("--issue", "1", "--branch", "feature", "--base", "main",
                                   body=RULES_BODY)
         self.assertEqual(result.returncode, 0, result.stderr)
@@ -410,34 +421,34 @@ class ReviewPacketTests(unittest.TestCase):
 
     def test_rename_into_rules_path_is_detected(self):
         """Regression table row 2 -- the gap this fix closes. A rename from
-        src/Deckard.Core/ into src/Deckard.Rules/ puts BOTH paths on one
+        src/Fixture.Core/ into src/Fixture.Rules/ puts BOTH paths on one
         "R100<TAB>old<TAB>new" line; only the old (non-rules) path anchored the line
         before the fix, so this was silently reported as no rules review needed."""
-        (self.repo / "src" / "Deckard.Core").mkdir(parents=True, exist_ok=True)
-        (self.repo / "src" / "Deckard.Core" / "Foo.cs").write_text("// v1\n", encoding="utf-8")
+        (self.repo / "src" / "Fixture.Core").mkdir(parents=True, exist_ok=True)
+        (self.repo / "src" / "Fixture.Core" / "Foo.cs").write_text("// v1\n", encoding="utf-8")
         self._commit("add Foo.cs under Core")
-        self._branch_with_rename("feature", "src/Deckard.Core/Foo.cs", "src/Deckard.Rules/Foo.cs")
+        self._branch_with_rename("feature", "src/Fixture.Core/Foo.cs", "src/Fixture.Rules/Foo.cs")
         result = self.run_script("--issue", "1", "--branch", "feature", "--base", "main",
                                   body=RULES_BODY)
         self.assertEqual(result.returncode, 0, result.stderr)
         # Confirms git actually reported a rename (not a delete+add) -- otherwise this
         # test would not exercise the one-line-per-change shape the bug depended on.
-        self.assertIn("R100\tsrc/Deckard.Core/Foo.cs\tsrc/Deckard.Rules/Foo.cs", result.stdout)
+        self.assertIn("R100\tsrc/Fixture.Core/Foo.cs\tsrc/Fixture.Rules/Foo.cs", result.stdout)
         self.assertIn("YES -- rules-conformance and the independent verdict", result.stdout)
 
     def test_rename_out_of_rules_path_is_detected(self):
-        """Regression table row 3: a rename from src/Deckard.Rules/ to
-        src/Deckard.Core/ was already detected before the fix, since the OLD path
+        """Regression table row 3: a rename from src/Fixture.Rules/ to
+        src/Fixture.Core/ was already detected before the fix, since the OLD path
         anchored the line. Kept as a regression so a future change to the detection
         logic cannot silently flip it back."""
-        (self.repo / "src" / "Deckard.Rules").mkdir(parents=True, exist_ok=True)
-        (self.repo / "src" / "Deckard.Rules" / "Foo.cs").write_text("// v1\n", encoding="utf-8")
+        (self.repo / "src" / "Fixture.Rules").mkdir(parents=True, exist_ok=True)
+        (self.repo / "src" / "Fixture.Rules" / "Foo.cs").write_text("// v1\n", encoding="utf-8")
         self._commit("add Foo.cs under Rules")
-        self._branch_with_rename("feature", "src/Deckard.Rules/Foo.cs", "src/Deckard.Core/Foo.cs")
+        self._branch_with_rename("feature", "src/Fixture.Rules/Foo.cs", "src/Fixture.Core/Foo.cs")
         result = self.run_script("--issue", "1", "--branch", "feature", "--base", "main",
                                   body=RULES_BODY)
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn("R100\tsrc/Deckard.Rules/Foo.cs\tsrc/Deckard.Core/Foo.cs", result.stdout)
+        self.assertIn("R100\tsrc/Fixture.Rules/Foo.cs\tsrc/Fixture.Core/Foo.cs", result.stdout)
         self.assertIn("YES -- rules-conformance and the independent verdict", result.stdout)
 
     def test_source_manifest_change_also_counts_as_rules_touching(self):

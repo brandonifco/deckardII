@@ -25,7 +25,7 @@ GOOD_HASH = "a" * 64
 
 class RecordVerdictTests(unittest.TestCase):
     def setUp(self) -> None:
-        self.tmp = Path(tempfile.mkdtemp(prefix="deckard-record-verdict-"))
+        self.tmp = Path(tempfile.mkdtemp(prefix="framework-record-verdict-"))
         self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
 
     # --------------------------------------------------------------------- gh stub
@@ -124,7 +124,7 @@ exit 1
         )
         self.assertEqual(result.returncode, 0, result.stderr)
         api_call = next(c for c in self.gh_calls() if c.startswith("api "))
-        self.assertIn("context=deckard-verdict/gemini", api_call)
+        self.assertIn("context=rules-verdict/gemini", api_call)
 
     def test_reviewer_accepts_in_house_independent_as_the_last_resort_fallback(self):
         """Issue #83: the ordered fallback chain's third link -- named distinctly from
@@ -136,7 +136,7 @@ exit 1
         )
         self.assertEqual(result.returncode, 0, result.stderr)
         api_call = next(c for c in self.gh_calls() if c.startswith("api "))
-        self.assertIn("context=deckard-verdict/in-house-independent", api_call)
+        self.assertIn("context=rules-verdict/in-house-independent", api_call)
 
     def test_verdict_must_be_pass_or_fail(self):
         result = self.run_script(
@@ -200,7 +200,7 @@ exit 1
         api_call = next(c for c in calls if c.startswith("api "))
         self.assertIn("repos/example/repo/statuses/abc1234def", api_call)
         self.assertIn("state=success", api_call)
-        self.assertIn("context=deckard-verdict/rules-conformance", api_call)
+        self.assertIn("context=rules-verdict/rules-conformance", api_call)
         self.assertIn(f"description=PASS bodySha256={GOOD_HASH} pages=44-47", api_call)
 
     def test_fail_verdict_posts_failure_state(self):
@@ -211,7 +211,7 @@ exit 1
         self.assertEqual(result.returncode, 0, result.stderr)
         api_call = next(c for c in self.gh_calls() if c.startswith("api "))
         self.assertIn("state=failure", api_call)
-        self.assertIn("context=deckard-verdict/codex", api_call)
+        self.assertIn("context=rules-verdict/codex", api_call)
         self.assertIn("description=FAIL bodySha256=", api_call)
 
     def test_notes_are_appended_to_the_description(self):
@@ -236,13 +236,13 @@ exit 1
     def test_explicit_repo_flag_skips_the_repo_view_lookup(self):
         result = self.run_script(
             "--sha", "abc1234def", "--reviewer", "codex", "--verdict", "pass",
-            "--packet-sha256", GOOD_HASH, "--pages", "44-47", "--repo", "brandonifco/deckard",
+            "--packet-sha256", GOOD_HASH, "--pages", "44-47", "--repo", "example/repo",
         )
         self.assertEqual(result.returncode, 0, result.stderr)
         calls = self.gh_calls()
         self.assertFalse(any(c.startswith("repo view") for c in calls))
         api_call = next(c for c in calls if c.startswith("api "))
-        self.assertIn("repos/brandonifco/deckard/statuses/", api_call)
+        self.assertIn("repos/example/repo/statuses/", api_call)
 
     def test_rerun_gate_dispatches_the_workflow_against_the_prs_branch(self):
         result = self.run_script(
@@ -273,7 +273,7 @@ exit 1
         """Prove the containment rather than asserting it in a docstring (Issue #28)."""
         result = self.run_script(
             "--sha", "abc1234def", "--reviewer", "rules-conformance", "--verdict", "pass",
-            "--packet-sha256", GOOD_HASH, "--pages", "44-47", "--repo", "brandonifco/deckard",
+            "--packet-sha256", GOOD_HASH, "--pages", "44-47", "--repo", "example/repo",
         )
         self.assertEqual(result.returncode, 0, result.stderr)
         calls = self.gh_calls()

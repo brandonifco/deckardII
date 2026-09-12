@@ -17,8 +17,7 @@ GitHub's ruleset cannot require a status check conditionally on which paths a PR
 touches: a required check applies to every PR on the branch, or none. So this check
 always runs, and decides for itself whether it has anything to check:
 
-  * the PR's diff touches no rules surface (src/Deckard.Rules/, src/Deckard.Data/,
-    their test projects, .github/source-manifest.json) -- PASS, trivially. Docs and
+  * the PR's diff touches no configured rules surface -- PASS, trivially. Docs and
     tooling work is never blocked by a review with nothing to review.
   * it touches one -- PASS only if a verdict is recorded for THIS EXACT HEAD COMMIT.
     Verdicts are GitHub commit statuses (see tools/record-verdict.sh), which are
@@ -67,7 +66,7 @@ TOUCHED_TIMEOUT_SECONDS = 10
 
 # Every verdict context this gate knows how to require. The reviewer name IS the context
 # suffix -- tools/record-verdict.sh posts to exactly one of these.
-IN_HOUSE_CONTEXT = "deckard-verdict/rules-conformance"
+IN_HOUSE_CONTEXT = "rules-verdict/rules-conformance"
 
 # The independent verdict's ordered fallback chain (Issue #83, ADR
 # 0010-independent-verdict-fallback-chain.md): Codex first, then Gemini, then an in-house
@@ -79,9 +78,9 @@ IN_HOUSE_CONTEXT = "deckard-verdict/rules-conformance"
 # gate outright, even if another context in the chain passed. The chain advances on a
 # vendor being unreachable (absent), never on disagreement -- see evaluate().
 INDEPENDENT_CONTEXTS = (
-    "deckard-verdict/codex",
-    "deckard-verdict/gemini",
-    "deckard-verdict/in-house-independent",
+    "rules-verdict/codex",
+    "rules-verdict/gemini",
+    "rules-verdict/in-house-independent",
 )
 RISK_LABEL = "risk:rules-conformance"
 
@@ -101,7 +100,7 @@ VERDICT_RE = re.compile(
 # PR close" regex, and a second copy is exactly the kind of drift Issue #41's own source
 # text warns against ("reuse its logic rather than writing a second copy that can drift").
 _pr_policy_spec = importlib.util.spec_from_file_location(
-    "deckard_pr_policy", Path(__file__).resolve().parent / "pr-policy.py"
+    "rules_gate_pr_policy", Path(__file__).resolve().parent / "pr-policy.py"
 )
 assert _pr_policy_spec and _pr_policy_spec.loader
 _pr_policy = importlib.util.module_from_spec(_pr_policy_spec)

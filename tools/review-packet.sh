@@ -228,7 +228,7 @@ done)"
 
 packet="$(cat <<EOF
 ================================================================================
-DECKARD REVIEW PACKET -- ephemeral, never commit this file
+FRAMEWORK REVIEW PACKET -- ephemeral, never commit this file
 ================================================================================
 issue      : #$ISSUE -- $title
 branch     : $BRANCH
@@ -282,7 +282,7 @@ $adrs
 
 $gates
 
-## Touches src/Deckard.Rules, src/Deckard.Data, their tests, or the source manifest?
+## Touches a configured rules surface or the source manifest?
 
 $([[ "$rules_touch" -eq 1 ]] && echo "YES -- rules-conformance and the independent verdict (fallback chain -- AGENTS.md / ADR 0010) apply, not just repo-steward." || echo "NO -- repo-steward's structural review is the whole review.")
 EOF

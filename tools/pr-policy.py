@@ -319,7 +319,7 @@ def check(body: str, changed_files: list[str], issue_labels, author: str | None 
         elif not LOCATOR.search(conformance):
             failures.append(
                 '"Rules conformance" names no page. Cite the location, e.g. '
-                '"SR6 Core / Tests / printed pp. 35-36 / PDF pp. 36-37". '
+                '"<sourceId> / <section> / printed pp. X-Y / PDF pp. X-Y". '
                 '"Matches the book" is a claim, not a locator.'
             )
 
@@ -331,7 +331,7 @@ def check(body: str, changed_files: list[str], issue_labels, author: str | None 
             failures.append(
                 f"{SOURCE_MANIFEST} changed but no ADR under {ADR_DIR} accompanies it. "
                 "Changing the pinned source baseline requires its own Issue, PR and ADR "
-                "-- see docs/decisions/0003-source-baseline.md."
+                "before merge."
             )
 
     return failures

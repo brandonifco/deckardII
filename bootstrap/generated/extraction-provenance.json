@@ -30,7 +30,7 @@
       },
       {
         "path": "bootstrap/config/contamination-baseline.json",
-        "sha256": "4b6bfe0ac73c0693f538449ad59fea67bed7d030dd64cae112bd1c6bdc7e72f0"
+        "sha256": "42cd6f4ffdca75d9edf4c0ff46763be975804ca174c7b04d266cf465dee351ae"
       },
       {
         "path": "bootstrap/config/contamination-policy.json",
@@ -38,7 +38,7 @@
       },
       {
         "path": "bootstrap/config/copy-manifest.txt",
-        "sha256": "c538f146fa2c3ff4f2d09c877795e316f4e889f5667aa95f526e545e2a88ab89"
+        "sha256": "4ebf385bece1f01b1a285eafe422b88fa62fb389f9ca4f533c41b2f1ec701192"
       },
       {
         "path": "bootstrap/config/exclusion-manifest.txt",
@@ -46,7 +46,7 @@
       },
       {
         "path": "bootstrap/config/rename-map.json",
-        "sha256": "775d66dc0a03261bca2636f932884a3870ad287cce9eed702015707a2666d589"
+        "sha256": "9b0e85eb0bb3a3b5f3c3aa43f925b40c712c9da74b62945e89b5ed5410d01009"
       },
       {
         "path": "bootstrap/config/structure-manifest.txt",

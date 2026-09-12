@@ -11,6 +11,7 @@ things are tested here that are easy to get wrong:
 from __future__ import annotations
 
 import importlib.util
+import os
 import shutil
 import sys
 import tempfile
@@ -18,6 +19,17 @@ import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
+
+_RULES_CONFIG_TMP = tempfile.TemporaryDirectory(prefix="framework-pr-policy-rules-config-")
+_RULES_CONFIG = Path(_RULES_CONFIG_TMP.name) / "rules-surface-paths.txt"
+_RULES_CONFIG.write_text(
+    "src/Fixture.Rules/\n"
+    "src/Fixture.Data/\n"
+    "tests/Fixture.Rules.Tests/\n"
+    "tests/Fixture.Data.Tests/\n",
+    encoding="utf-8",
+)
+os.environ["FRAMEWORK_RULES_SURFACE_CONFIG"] = str(_RULES_CONFIG)
 
 _spec = importlib.util.spec_from_file_location("pr_policy", ROOT / "tools" / "pr-policy.py")
 assert _spec and _spec.loader
@@ -31,7 +43,7 @@ Closes #7
 
 ## Exact behavioral claim
 
-Deckard.Core exposes a PCG32 IRandomSource whose sequence is pinned to the published
+Fixture.Core exposes a PCG32 IRandomSource whose sequence is pinned to the published
 reference vectors.
 
 ## Scope
@@ -41,7 +53,7 @@ still unimplemented.
 
 ## Rules conformance
 
-N/A -- no Shadowrun mechanic is touched; this is the PRNG substrate below the dice layer.
+N/A -- no rules mechanic is touched; this is the PRNG substrate below the dice layer.
 
 ## Tests and evidence
 
@@ -89,7 +101,7 @@ class TemplateTests(unittest.TestCase):
             self.assertIn(expected, joined)
 
     def test_properly_filled_template_passes(self):
-        self.assertEqual(pr_policy.check(GOOD, ["src/Deckard.Core/Pcg.cs"], no_labels), [])
+        self.assertEqual(pr_policy.check(GOOD, ["src/Fixture.Core/Pcg.cs"], no_labels), [])
 
 
 class LinkedIssueTests(unittest.TestCase):
@@ -217,7 +229,7 @@ class BotExemptionTests(unittest.TestCase):
 
     def test_the_same_empty_body_from_a_human_still_fails(self):
         failures = pr_policy.check(self.EMPTY, ["Directory.Packages.props"], no_labels,
-                                   author="brandonifco")
+                                   author="example-user")
         self.assertTrue(failures)
         self.assertIn("no linked Issue", " ".join(failures))
 
@@ -237,30 +249,30 @@ class BotExemptionTests(unittest.TestCase):
 
         The behaviour is deliberate: the exemption waives the NARRATIVE sections, and a
         bot cannot write a rules-conformance section whatever it touches. Correctness is
-        still gated by build-and-test. A dependency bot reaching into src/Deckard.Rules/
+        still gated by build-and-test. A dependency bot reaching into src/Fixture.Rules/
         would be anomalous, but failing policy is the wrong lever -- the bot cannot fix
         it, so the PR would simply be stuck. Recorded here rather than left implicit.
         """
         self.assertEqual(
-            pr_policy.check(self.EMPTY, ["src/Deckard.Rules/X.cs"], no_labels,
+            pr_policy.check(self.EMPTY, ["src/Fixture.Rules/X.cs"], no_labels,
                             author="dependabot[bot]"),
             [],
         )
 
     def test_is_exempt_helper(self):
         self.assertTrue(pr_policy.is_exempt("dependabot[bot]"))
-        self.assertFalse(pr_policy.is_exempt("brandonifco"))
+        self.assertFalse(pr_policy.is_exempt("example-user"))
         self.assertFalse(pr_policy.is_exempt(None))
 
 
 class LocatorShapeTests(unittest.TestCase):
     """A conformance section must name a page, not assert agreement with the book."""
 
-    RULES_FILE = ["src/Deckard.Rules/DiceTest.cs"]
+    RULES_FILE = ["src/Fixture.Rules/DiceTest.cs"]
 
     def _conformance(self, text: str) -> str:
         return GOOD.replace(
-            "N/A -- no Shadowrun mechanic is touched; this is the PRNG substrate below "
+            "N/A -- no rules mechanic is touched; this is the PRNG substrate below "
             "the dice layer.",
             text,
         )
@@ -277,12 +289,12 @@ class LocatorShapeTests(unittest.TestCase):
 
     def test_a_full_locator_passes(self):
         body = self._conformance(
-            "SR6 Core / Tests / printed pp. 35-36 / PDF pp. 36-37. Verified all 6 rows."
+            "fixture-core / Tests / printed pp. 35-36 / PDF pp. 36-37. Verified all 6 rows."
         )
         self.assertEqual(pr_policy.check(body, self.RULES_FILE, no_labels), [])
 
     def test_a_singular_page_locator_passes(self):
-        body = self._conformance("SR6 Core / Glitches / printed p. 44 / PDF p. 45.")
+        body = self._conformance("fixture-core / Glitches / printed p. 44 / PDF p. 45.")
         self.assertEqual(pr_policy.check(body, self.RULES_FILE, no_labels), [])
 
     def test_locator_is_not_required_for_non_rules_work(self):
@@ -294,12 +306,12 @@ class SourceBaselineTests(unittest.TestCase):
 
     def _conformance(self, text: str) -> str:
         return GOOD.replace(
-            "N/A -- no Shadowrun mechanic is touched; this is the PRNG substrate below "
+            "N/A -- no rules mechanic is touched; this is the PRNG substrate below "
             "the dice layer.",
             text,
         )
 
-    LOCATOR = "SR6 Core / Tests / printed pp. 35-36 / PDF pp. 36-37."
+    LOCATOR = "fixture-core / Tests / printed pp. 35-36 / PDF pp. 36-37."
 
     def test_manifest_change_without_an_adr_is_refused(self):
         failures = pr_policy.check(self._conformance(self.LOCATOR),
@@ -324,7 +336,7 @@ class SourceBaselineTests(unittest.TestCase):
 
 
 class RulesConformanceTests(unittest.TestCase):
-    RULES_FILE = ["src/Deckard.Rules/DiceTest.cs"]
+    RULES_FILE = ["src/Fixture.Rules/DiceTest.cs"]
 
     def test_na_conformance_fails_when_rules_changed(self):
         failures = pr_policy.check(GOOD, self.RULES_FILE, no_labels)
@@ -335,19 +347,19 @@ class RulesConformanceTests(unittest.TestCase):
 
     def test_real_locator_passes(self):
         body = GOOD.replace(
-            "N/A -- no Shadowrun mechanic is touched; this is the PRNG substrate below "
+            "N/A -- no rules mechanic is touched; this is the PRNG substrate below "
             "the dice layer.",
-            "SR6 Core / Success Tests / printed p. 40 / PDF p. 41. Verified all 6 rows "
+            "fixture-core / Success Tests / printed p. 40 / PDF p. 41. Verified all 6 rows "
             "of the printed threshold table.",
         )
         self.assertEqual(pr_policy.check(body, self.RULES_FILE, no_labels), [])
 
     def test_data_changes_count_as_rules_work(self):
-        failures = pr_policy.check(GOOD, ["src/Deckard.Data/Skills.json"], no_labels)
+        failures = pr_policy.check(GOOD, ["src/Fixture.Data/Skills.json"], no_labels)
         self.assertIn("Rules conformance", " ".join(failures))
 
     def test_rules_tests_count_as_rules_work(self):
-        failures = pr_policy.check(GOOD, ["tests/Deckard.Rules.Tests/T.cs"], no_labels)
+        failures = pr_policy.check(GOOD, ["tests/Fixture.Rules.Tests/T.cs"], no_labels)
         self.assertIn("Rules conformance", " ".join(failures))
 
     def test_manifest_change_counts_as_rules_work(self):
@@ -355,7 +367,7 @@ class RulesConformanceTests(unittest.TestCase):
         self.assertIn("Rules conformance", " ".join(failures))
 
     def test_core_only_change_is_not_rules_work(self):
-        self.assertEqual(pr_policy.check(GOOD, ["src/Deckard.Core/Pcg.cs"], no_labels), [])
+        self.assertEqual(pr_policy.check(GOOD, ["src/Fixture.Core/Pcg.cs"], no_labels), [])
 
 
 class PackagesLockFileTests(unittest.TestCase):
@@ -366,10 +378,10 @@ class PackagesLockFileTests(unittest.TestCase):
     """
 
     LOCK_FILES = [
-        "src/Deckard.Rules/packages.lock.json",
-        "src/Deckard.Data/packages.lock.json",
-        "tests/Deckard.Rules.Tests/packages.lock.json",
-        "tests/Deckard.Data.Tests/packages.lock.json",
+        "src/Fixture.Rules/packages.lock.json",
+        "src/Fixture.Data/packages.lock.json",
+        "tests/Fixture.Rules.Tests/packages.lock.json",
+        "tests/Fixture.Data.Tests/packages.lock.json",
     ]
 
     def test_lock_files_alone_do_not_require_rules_conformance(self):
@@ -382,10 +394,10 @@ class PackagesLockFileTests(unittest.TestCase):
 
     def test_a_real_rules_file_alongside_a_lock_file_still_requires_conformance(self):
         """The lock file must not hide a genuine rules change riding in the same diff."""
-        changed = ["src/Deckard.Rules/packages.lock.json", "src/Deckard.Rules/DiceTest.cs"]
+        changed = ["src/Fixture.Rules/packages.lock.json", "src/Fixture.Rules/DiceTest.cs"]
         failures = pr_policy.check(GOOD, changed, no_labels)
         self.assertIn("says N/A", " ".join(failures))
-        self.assertEqual(pr_policy.rules_files_in(changed), ["src/Deckard.Rules/DiceTest.cs"])
+        self.assertEqual(pr_policy.rules_files_in(changed), ["src/Fixture.Rules/DiceTest.cs"])
 
     def test_source_manifest_is_still_rules_work(self):
         """The case most likely to break: a wider exclusion (e.g. by extension) would
@@ -399,7 +411,7 @@ class PackagesLockFileTests(unittest.TestCase):
 
     def test_a_dicepool_change_still_requires_conformance(self):
         failures = pr_policy.check(
-            GOOD, ["src/Deckard.Rules/Resolution/DicePoolRoll.cs"], no_labels
+            GOOD, ["src/Fixture.Rules/Resolution/DicePoolRoll.cs"], no_labels
         )
         self.assertIn("Rules conformance", " ".join(failures))
 
@@ -416,17 +428,17 @@ class RulesSurfaceClassificationTests(unittest.TestCase):
 
     RULES_SURFACE_FILES = [
         ".github/source-manifest.json",
-        "src/Deckard.Rules/DicePoolRoll.cs",
-        "src/Deckard.Data/Skills.json",
-        "tests/Deckard.Rules.Tests/DicePoolRollTests.cs",
-        "tests/Deckard.Data.Tests/SkillsTests.cs",
+        "src/Fixture.Rules/DicePoolRoll.cs",
+        "src/Fixture.Data/Skills.json",
+        "tests/Fixture.Rules.Tests/DicePoolRollTests.cs",
+        "tests/Fixture.Data.Tests/SkillsTests.cs",
     ]
 
     LOCK_FILES = [
-        "src/Deckard.Rules/packages.lock.json",
-        "src/Deckard.Data/packages.lock.json",
-        "tests/Deckard.Rules.Tests/packages.lock.json",
-        "tests/Deckard.Data.Tests/packages.lock.json",
+        "src/Fixture.Rules/packages.lock.json",
+        "src/Fixture.Data/packages.lock.json",
+        "tests/Fixture.Rules.Tests/packages.lock.json",
+        "tests/Fixture.Data.Tests/packages.lock.json",
     ]
 
     NON_RULES_FILES = ["tools/foo.py", "docs/bar.md"]
@@ -455,54 +467,48 @@ class RulesSurfaceClassificationTests(unittest.TestCase):
 
 
 class SingleEditPropagationTests(unittest.TestCase):
-    """Issue #89's central acceptance criterion, and the test that would have caught the
-    original drift: a change to the rules-surface directory definition in
-    tools/lib/rules-surface.sh ALONE -- no second edit to pr-policy.py -- must be picked
-    up by rules_files_in(). Proven by actually varying the definition (a temp copy of the
-    library with a widened directory regex, with pr_policy.RULES_SURFACE_LIB monkeypatched
-    to point at it) rather than asserting the sharing in prose. Two definitions that only
-    happen to agree today, as before this Issue, would pass every other test in this file
-    and still fail the one below.
-    """
+    """Changing only the central rules-surface configuration changes classification."""
 
-    NEEDLE = "(Rules|Data)/"
-    REPLACEMENT = "(Rules|Data|Foo)/"
-    NEW_DIR_FILE = "src/Deckard.Foo/Thing.cs"
+    NEW_DIR_FILE = "src/Fixture.ExtraRules/Thing.cs"
 
     def setUp(self):
-        self.original_lib = pr_policy.RULES_SURFACE_LIB
-        self.original_text = self.original_lib.read_text(encoding="utf-8")
-        self.assertIn(
-            self.NEEDLE, self.original_text,
-            "fixture assumption broken: rules-surface.sh no longer spells the directory "
-            "regex the way this test expects to widen it",
-        )
-        self.tmpdir = tempfile.mkdtemp(prefix="deckard-rules-surface-")
+        self.original_config = os.environ["FRAMEWORK_RULES_SURFACE_CONFIG"]
+        self.tmpdir = tempfile.mkdtemp(prefix="framework-rules-surface-config-")
         self.addCleanup(shutil.rmtree, self.tmpdir, ignore_errors=True)
-        self.addCleanup(setattr, pr_policy, "RULES_SURFACE_LIB", self.original_lib)
+        self.addCleanup(
+            os.environ.__setitem__,
+            "FRAMEWORK_RULES_SURFACE_CONFIG",
+            self.original_config,
+        )
         self.addCleanup(pr_policy._classify_rules_surface.cache_clear)
 
-    def _install(self, lib_text: str) -> None:
-        lib_path = Path(self.tmpdir) / "rules-surface.sh"
-        lib_path.write_text(lib_text, encoding="utf-8")
-        pr_policy.RULES_SURFACE_LIB = lib_path
+    def _install(self, entries: str) -> None:
+        config = Path(self.tmpdir) / "rules-surface-paths.txt"
+        config.write_text(entries, encoding="utf-8")
+        os.environ["FRAMEWORK_RULES_SURFACE_CONFIG"] = str(config)
         pr_policy._classify_rules_surface.cache_clear()
 
     def test_control_stock_definition_does_not_classify_the_new_directory(self):
-        """Control for the test below: an unmodified copy of the real library must NOT
-        already treat src/Deckard.Foo/ as a rules surface, or the widening test would
-        pass for the wrong reason."""
-        self._install(self.original_text)
+        self._install(
+            "src/Fixture.Rules/\n"
+            "src/Fixture.Data/\n"
+            "tests/Fixture.Rules.Tests/\n"
+            "tests/Fixture.Data.Tests/\n"
+        )
         self.assertEqual(pr_policy.rules_files_in([self.NEW_DIR_FILE]), [])
 
-    def test_widening_the_directory_regex_alone_is_picked_up_with_no_pr_policy_edit(self):
-        """Vary ONLY the copy of tools/lib/rules-surface.sh pr-policy.py is pointed at --
-        pr-policy.py's own source is never touched -- and confirm the new directory is
-        classified as a rules surface purely as a result of that one edit."""
-        widened = self.original_text.replace(self.NEEDLE, self.REPLACEMENT, 1)
-        self.assertNotEqual(widened, self.original_text)
-        self._install(widened)
-        self.assertEqual(pr_policy.rules_files_in([self.NEW_DIR_FILE]), [self.NEW_DIR_FILE])
+    def test_widening_the_central_config_alone_is_picked_up_with_no_pr_policy_edit(self):
+        self._install(
+            "src/Fixture.Rules/\n"
+            "src/Fixture.Data/\n"
+            "tests/Fixture.Rules.Tests/\n"
+            "tests/Fixture.Data.Tests/\n"
+            "src/Fixture.ExtraRules/\n"
+        )
+        self.assertEqual(
+            pr_policy.rules_files_in([self.NEW_DIR_FILE]),
+            [self.NEW_DIR_FILE],
+        )
 
 
 class RulesSurfaceClassifierFailureTests(unittest.TestCase):
@@ -518,12 +524,12 @@ class RulesSurfaceClassifierFailureTests(unittest.TestCase):
     silence reads as approval.
     """
 
-    RULES_FILE = ["src/Deckard.Rules/DiceTest.cs"]
+    RULES_FILE = ["src/Fixture.Rules/DiceTest.cs"]
 
     def setUp(self):
         self.original_lib = pr_policy.RULES_SURFACE_LIB
         self.original_timeout = pr_policy.CLASSIFY_TIMEOUT_SECONDS
-        self.tmpdir = tempfile.mkdtemp(prefix="deckard-rules-surface-broken-")
+        self.tmpdir = tempfile.mkdtemp(prefix="framework-rules-surface-broken-")
         self.addCleanup(shutil.rmtree, self.tmpdir, ignore_errors=True)
         self.addCleanup(setattr, pr_policy, "RULES_SURFACE_LIB", self.original_lib)
         self.addCleanup(setattr, pr_policy, "CLASSIFY_TIMEOUT_SECONDS", self.original_timeout)
@@ -547,7 +553,7 @@ class RulesSurfaceClassifierFailureTests(unittest.TestCase):
         self.assertIn("boom", message)
 
     def test_nonzero_exit_does_not_report_the_pr_as_having_no_rules_files(self):
-        """The exact scenario the defect names: a PR touching src/Deckard.Rules/ must not
+        """The exact scenario the defect names: a PR touching src/Fixture.Rules/ must not
         be silently treated as touching nothing when the classifier is broken."""
         self._install_script("#!/usr/bin/env bash\nexit 1\n")
         with self.assertRaises(pr_policy.RulesSurfaceClassifierError):

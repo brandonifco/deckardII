@@ -5,8 +5,7 @@ name: rules-conformance-gate
 # check applies to every PR on the branch, or none -- so this workflow runs on every
 # PR and decides for itself whether it has anything to check:
 #
-#   * the diff touches no rules surface (src/Deckard.Rules/, src/Deckard.Data/, their
-#     test projects, .github/source-manifest.json) -- PASS trivially. Docs and tooling
+#   * the diff touches no configured rules surface -- PASS trivially. Docs and tooling
 #     work is never blocked by a review with nothing to review.
 #   * it touches one -- PASS only if tools/record-verdict.sh has recorded a verdict for
 #     THIS EXACT HEAD COMMIT (a GitHub commit status, so amending the PR -- a new SHA --

@@ -26,7 +26,7 @@
 # docs/agent-team.md) is not pinned to one vendor: it follows an ordered fallback chain --
 # `codex` first, then `gemini`, then `in-house-independent` only when neither vendor is
 # reachable (Issue #83, ADR 0010-independent-verdict-fallback-chain.md). Each reviewer
-# posts to its own context (deckard-verdict/<reviewer>), so a merged commit's statuses
+# posts to its own context (rules-verdict/<reviewer>), so a merged commit's statuses
 # name which vendor actually produced the second verdict rather than hiding a
 # same-vendor fallback behind a generic name. `in-house-independent` is the fallback of
 # last resort, not an equivalent option: a second reviewer from the same model family as
@@ -93,7 +93,7 @@ case "$REVIEWER" in
   "") die "--reviewer is required: rules-conformance (in-house), or one of codex, gemini, in-house-independent (independent, tried in that order)" ;;
   *) die "--reviewer must be one of rules-conformance, codex, gemini, in-house-independent, got: $REVIEWER" ;;
 esac
-CONTEXT="deckard-verdict/$REVIEWER"
+CONTEXT="rules-verdict/$REVIEWER"
 
 case "$VERDICT" in
   pass) STATE="success"; LABEL="PASS" ;;

@@ -14,14 +14,14 @@
     "tree": "e8fb547b6724710b8f3897174defd9356a0e1694"
   },
   "extraction": {
-    "approvedManifestEntries": 26,
-    "approvedTrackedFiles": 39,
-    "mechanicallyTransformedFiles": 16,
+    "approvedManifestEntries": 27,
+    "approvedTrackedFiles": 40,
+    "mechanicallyTransformedFiles": 27,
     "declaredStructureDirectories": 5
   },
   "knownContaminationDebt": {
-    "occurrences": 212,
-    "buckets": 30
+    "occurrences": 94,
+    "buckets": 11
   },
   "validation": {
     "declaredChecks": 8

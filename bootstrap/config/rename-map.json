@@ -375,6 +375,221 @@
       "path": "tools/tests/test_new_issue.py",
       "search": "SR6 Core / Glitches / printed p. 44 / PDF p. 45",
       "replace": "fixture-core / Glitches / printed p. 44 / PDF p. 45"
+    },
+    {
+      "path": "tools/lib/rules-surface.sh",
+      "search": "#!/usr/bin/env bash\n# rules-surface.sh -- the one definition of what counts as a Deckard \"rules surface\"\n# change, shared by tools/review-packet.sh and tools/rules-conformance-gate.py (Issue\n# #41). Before this file existed, review-packet.sh carried the only copy of this logic;\n# a second, hand-rolled copy in the merge-gate script is exactly the kind of drift\n# CLAUDE.md's \"one definition\" principle exists to prevent, so the gate invokes this\n# file as a subprocess instead of reimplementing it.\n#\n# `git diff --name-status` puts a rename or copy's destination on the SAME line as its\n# source: \"R100<TAB>old/path<TAB>new/path\" (copies are \"C<score>\", same two-path shape).\n# A regex anchored with `^` and tested against that whole line only ever sees the\n# leading status code, never a path -- a rename that moved a file INTO src/Deckard.Rules\n# was invisible under the naive version of this check. `rules_surface_touched` strips\n# the status column and puts every remaining tab-separated field on its own line before\n# matching, so a rename in EITHER direction is visible to the anchored regex.\n#\n# Issue #86: a directory match alone is not enough. NuGet's RestorePackagesWithLockFile\n# requires a `packages.lock.json` to sit beside the project file it locks, so one lands\n# under src/Deckard.Rules/ etc. even though it carries no rules content and can never\n# have a printed-page citation. RULES_SURFACE_EXCLUDED_BASENAMES below is the narrow,\n# explicit fix: a path is a rules surface only when it matches the directory regex AND\n# its exact basename is not on that list. Basename-only, deliberately -- a pattern\n# (e.g. \"*.json\") would also swallow .github/source-manifest.json, which is deliberately\n# part of the rules surface and must stay one. Add an entry only when the file actually\n# exists in the tree, each with its own one-line reason.\n#\n# No `set -euo pipefail` at file scope: this file is normally `source`d, and a sourced\n# file's `set` calls change the CALLING shell's options too. Only the standalone-execution\n# branch at the bottom opts into strict mode, for itself alone.\n\nRULES_SURFACE_PATHS_REGEX='^(src/Deckard\\.(Rules|Data)/|tests/Deckard\\.(Rules|Data)\\.Tests/|\\.github/source-manifest\\.json$)'\n\nRULES_SURFACE_EXCLUDED_BASENAMES=(\n  # NuGet's RestorePackagesWithLockFile (Issue #43) writes one packages.lock.json beside\n  # each project file it locks, landing it inside src/Deckard.Rules/, src/Deckard.Data/\n  # and their test projects. It records transitive package hashes, not rules content,\n  # and cannot carry a printed-page citation (Issue #86).\n  \"packages.lock.json\"\n)\n\n# rules_surface_excluded_basename <basename>\n# True (exit 0) when <basename> -- a bare file name, no directory component -- is on the\n# exclusion list above.\nrules_surface_excluded_basename() {\n  local base=\"$1\" excluded\n  for excluded in \"${RULES_SURFACE_EXCLUDED_BASENAMES[@]}\"; do\n    if [[ \"$base\" == \"$excluded\" ]]; then\n      return 0\n    fi\n  done\n  return 1\n}\n\n# rules_surface_path_matches <path>\n# True (exit 0) when <path> is inside a rules-surface directory (or is the pinned source\n# manifest) AND its exact basename is not excluded.\nrules_surface_path_matches() {\n  local path=\"$1\"\n  [[ \"$path\" =~ $RULES_SURFACE_PATHS_REGEX ]] || return 1\n  ! rules_surface_excluded_basename \"${path##*/}\"\n}\n\n# rules_surface_touched <name-status-text>\n# $1: the full output of `git diff --name-status <range>`. Returns success (0, \"yes, a\n# rules surface changed\") or failure (1, \"no\") as its exit code -- the same convention\n# `grep -q` uses, so callers can write `if rules_surface_touched \"$changed_files\"; then`.\nrules_surface_touched() {\n  local path\n  while IFS= read -r path; do\n    [[ -z \"$path\" ]] && continue\n    if rules_surface_path_matches \"$path\"; then\n      return 0\n    fi\n  done < <(cut -f2- <<<\"$1\" | tr '\\t' '\\n')\n  return 1\n}\n\n# Standalone use, for a non-bash caller (tools/rules-conformance-gate.py, tools/pr-policy.py)\n# that wants this exact logic without duplicating it: reads `git diff --name-status` text\n# from stdin, exits 0 when a rules surface changed, 1 when it did not. `--print-excluded-\n# basenames` instead prints the exclusion list above, one name per line, for a caller that\n# needs the list itself rather than a single yes/no verdict.\n#\n# `--classify` (Issue #89) is for a caller that holds a flat list of plain paths -- no\n# status column, no rename pairs -- such as `gh pr view --json files`, and wants to know\n# WHICH of them are a rules surface rather than re-implementing rules_surface_path_matches\n# itself. It reads one path per line from stdin and echoes back only the ones that match,\n# one per line, in the same order, in a single pass -- so a caller with a large diff\n# classifies it with one subprocess call instead of one per path. This is the shape\n# tools/pr-policy.py uses: asking \"which of these are a rules surface?\" instead of\n# fetching the directory list and matching against it locally, which is how pr-policy.py's\n# own copy of that list drifted from this file in the first place.\n#\n# Only runs when this file is executed directly, not when it is `source`d (bash sets $0\n# to the sourcing script's own path in that case, which never equals ${BASH_SOURCE[0]}\n# here).\nif [[ \"${BASH_SOURCE[0]}\" == \"${0}\" ]]; then\n  set -euo pipefail\n  if [[ \"${1:-}\" == \"--print-excluded-basenames\" ]]; then\n    printf '%s\\n' \"${RULES_SURFACE_EXCLUDED_BASENAMES[@]}\"\n    exit 0\n  fi\n  if [[ \"${1:-}\" == \"--classify\" ]]; then\n    while IFS= read -r path; do\n      [[ -z \"$path\" ]] && continue\n      if rules_surface_path_matches \"$path\"; then\n        printf '%s\\n' \"$path\"\n      fi\n    done\n    exit 0\n  fi\n  input=\"$(cat)\"\n  rules_surface_touched \"$input\"\nfi\n",
+      "replace": "#!/usr/bin/env bash\n# rules-surface.sh -- the one definition of what counts as a repository \"rules surface\"\n# change, shared by the review packet, PR policy, and rules-conformance merge gate.\n#\n# The bare framework deliberately assumes no runtime/data/test project names. A consuming\n# ruleset may declare additional rules-surface paths in:\n#\n#   .github/rules-surface-paths.txt\n#\n# One repository-relative literal path is allowed per line. Blank lines and lines\n# beginning with # are ignored. An entry ending in \"/\" matches that directory and all\n# descendants; any other entry matches one exact file. Globs and regular expressions are\n# deliberately unsupported: another ruleset genuinely needs different paths, not a new\n# pattern language.\n#\n# .github/source-manifest.json is always a rules surface when it exists. The bare\n# framework may legitimately have no source manifest and no configured rules paths yet.\n#\n# `git diff --name-status` puts a rename or copy's destination on the SAME line as its\n# source: \"R100<TAB>old/path<TAB>new/path\" (copies are \"C<score>\", same two-path shape).\n# `rules_surface_touched` strips the status column and checks every remaining path, so a\n# rename in either direction is visible.\n#\n# packages.lock.json is excluded by exact basename. It is dependency metadata, not rules\n# content, even when a consuming ruleset stores it beside a rules project.\n#\n# No `set -euo pipefail` at file scope: this file is normally sourced, and a sourced\n# file's `set` calls would change the calling shell's options.\n\nRULES_SURFACE_REPO_ROOT=\"$(cd \"$(dirname \"${BASH_SOURCE[0]}\")/../..\" && pwd)\"\nRULES_SURFACE_CONFIG=\"$RULES_SURFACE_REPO_ROOT/.github/rules-surface-paths.txt\"\n\nRULES_SURFACE_BUILTIN_EXACT_PATHS=(\n  \".github/source-manifest.json\"\n)\n\nRULES_SURFACE_EXCLUDED_BASENAMES=(\n  \"packages.lock.json\"\n)\n\nrules_surface_excluded_basename() {\n  local base=\"$1\" excluded\n  for excluded in \"${RULES_SURFACE_EXCLUDED_BASENAMES[@]}\"; do\n    if [[ \"$base\" == \"$excluded\" ]]; then\n      return 0\n    fi\n  done\n  return 1\n}\n\nrules_surface_config_entry_valid() {\n  local entry=\"$1\"\n  local trimmed=\"${entry%/}\"\n\n  [[ -n \"$entry\" ]] || return 1\n  [[ \"$entry\" != /* ]] || return 1\n  [[ \"$trimmed\" != \".\" && \"$trimmed\" != \"..\" ]] || return 1\n  [[ \"$trimmed\" != ../* && \"$trimmed\" != */../* && \"$trimmed\" != */.. ]] || return 1\n  [[ \"$trimmed\" != \".git\" && \"$trimmed\" != .git/* ]] || return 1\n  return 0\n}\n\nrules_surface_declared_path_matches() {\n  local path=\"$1\" builtin entry\n\n  for builtin in \"${RULES_SURFACE_BUILTIN_EXACT_PATHS[@]}\"; do\n    if [[ \"$path\" == \"$builtin\" ]]; then\n      return 0\n    fi\n  done\n\n  [[ -f \"$RULES_SURFACE_CONFIG\" ]] || return 1\n\n  while IFS= read -r entry || [[ -n \"$entry\" ]]; do\n    entry=\"${entry%$'\\r'}\"\n    [[ -z \"$entry\" || \"$entry\" == \\#* ]] && continue\n\n    if ! rules_surface_config_entry_valid \"$entry\"; then\n      printf 'rules-surface: invalid entry in %s: %s\\n' \"$RULES_SURFACE_CONFIG\" \"$entry\" >&2\n      return 2\n    fi\n\n    if [[ \"$entry\" == */ ]]; then\n      [[ \"$path\" == \"$entry\"* ]] && return 0\n    elif [[ \"$path\" == \"$entry\" ]]; then\n      return 0\n    fi\n  done < \"$RULES_SURFACE_CONFIG\"\n\n  return 1\n}\n\nrules_surface_path_matches() {\n  local path=\"$1\" status\n\n  if rules_surface_declared_path_matches \"$path\"; then\n    status=0\n  else\n    status=$?\n  fi\n\n  [[ \"$status\" -eq 0 ]] || return \"$status\"\n\n  if rules_surface_excluded_basename \"${path##*/}\"; then\n    return 1\n  fi\n\n  return 0\n}\n\nrules_surface_touched() {\n  local path status\n\n  while IFS= read -r path; do\n    [[ -z \"$path\" ]] && continue\n\n    if rules_surface_path_matches \"$path\"; then\n      return 0\n    else\n      status=$?\n      [[ \"$status\" -eq 1 ]] || return \"$status\"\n    fi\n  done < <(cut -f2- <<<\"$1\" | tr '\\t' '\\n')\n\n  return 1\n}\n\nif [[ \"${BASH_SOURCE[0]}\" == \"${0}\" ]]; then\n  set -euo pipefail\n\n  if [[ \"${1:-}\" == \"--print-excluded-basenames\" ]]; then\n    printf '%s\\n' \"${RULES_SURFACE_EXCLUDED_BASENAMES[@]}\"\n    exit 0\n  fi\n\n  if [[ \"${1:-}\" == \"--classify\" ]]; then\n    while IFS= read -r path; do\n      [[ -z \"$path\" ]] && continue\n\n      if rules_surface_path_matches \"$path\"; then\n        printf '%s\\n' \"$path\"\n      else\n        status=$?\n        [[ \"$status\" -eq 1 ]] || exit \"$status\"\n      fi\n    done\n    exit 0\n  fi\n\n  input=\"$(cat)\"\n  if rules_surface_touched \"$input\"; then\n    exit 0\n  else\n    status=$?\n    exit \"$status\"\n  fi\nfi\n"
+    },
+    {
+      "path": "tools/pr-policy.py",
+      "search": "\"SR6 Core / Tests / printed pp. 35-36 / PDF pp. 36-37\". ",
+      "replace": "\"<sourceId> / <section> / printed pp. X-Y / PDF pp. X-Y\". "
+    },
+    {
+      "path": "tools/pr-policy.py",
+      "search": "-- see docs/decisions/0003-source-baseline.md.",
+      "replace": "before merge."
+    },
+    {
+      "path": "tools/rules-conformance-gate.py",
+      "search": "  * the PR's diff touches no rules surface (src/{{SOURCE_PREFIX}}.Rules/, src/{{SOURCE_PREFIX}}.Data/,\n    their test projects, .github/source-manifest.json) -- PASS, trivially. Docs and\n",
+      "replace": "  * the PR's diff touches no configured rules surface -- PASS, trivially. Docs and\n"
+    },
+    {
+      "path": "tools/rules-conformance-gate.py",
+      "search": "{{SOURCE_PREFIX_LOWER}}-verdict/",
+      "replace": "rules-verdict/"
+    },
+    {
+      "path": "tools/rules-conformance-gate.py",
+      "search": "\"{{SOURCE_PREFIX_LOWER}}_pr_policy\"",
+      "replace": "\"rules_gate_pr_policy\""
+    },
+    {
+      "path": "tools/record-verdict.sh",
+      "search": "{{SOURCE_PREFIX_LOWER}}-verdict/",
+      "replace": "rules-verdict/"
+    },
+    {
+      "path": "tools/review-packet.sh",
+      "search": "{{SOURCE_PREFIX_UPPER}} REVIEW PACKET -- ephemeral, never commit this file",
+      "replace": "FRAMEWORK REVIEW PACKET -- ephemeral, never commit this file"
+    },
+    {
+      "path": "tools/review-packet.sh",
+      "search": "## Touches src/{{SOURCE_PREFIX}}.Rules, src/{{SOURCE_PREFIX}}.Data, their tests, or the source manifest?",
+      "replace": "## Touches a configured rules surface or the source manifest?"
+    },
+    {
+      "path": ".github/pull_request_template.md",
+      "search": "       SR6 Core / <section> / printed p. X / PDF p. Y",
+      "replace": "       <sourceId> / <section> / printed p. X / PDF p. Y"
+    },
+    {
+      "path": ".github/pull_request_template.md",
+      "search": "     that a review actually happened. If this PR touches src/{{SOURCE_PREFIX}}.Rules/,\n     src/{{SOURCE_PREFIX}}.Data/, their test projects, or .github/source-manifest.json, the\n",
+      "replace": "     that a review actually happened. If this PR touches a configured rules surface, the\n"
+    },
+    {
+      "path": ".github/workflows/rules-conformance-gate.yml",
+      "search": "#   * the diff touches no rules surface (src/{{SOURCE_PREFIX}}.Rules/, src/{{SOURCE_PREFIX}}.Data/, their\n#     test projects, .github/source-manifest.json) -- PASS trivially. Docs and tooling\n",
+      "replace": "#   * the diff touches no configured rules surface -- PASS trivially. Docs and tooling\n"
+    },
+    {
+      "path": "tools/tests/test_pr_policy.py",
+      "search": "SR6 Core",
+      "replace": "fixture-core"
+    },
+    {
+      "path": "tools/tests/test_pr_policy.py",
+      "search": "Shadowrun mechanic",
+      "replace": "rules mechanic"
+    },
+    {
+      "path": "tools/tests/test_pr_policy.py",
+      "search": "{{SOURCE_PREFIX}}.Rules",
+      "replace": "Fixture.Rules"
+    },
+    {
+      "path": "tools/tests/test_pr_policy.py",
+      "search": "{{SOURCE_PREFIX}}.Data",
+      "replace": "Fixture.Data"
+    },
+    {
+      "path": "tools/tests/test_pr_policy.py",
+      "search": "{{SOURCE_PREFIX}}.Core",
+      "replace": "Fixture.Core"
+    },
+    {
+      "path": "tools/tests/test_pr_policy.py",
+      "search": "{{SOURCE_PREFIX}}.Foo",
+      "replace": "Fixture.Foo"
+    },
+    {
+      "path": "tools/tests/test_rules_conformance_gate.py",
+      "search": "{{SOURCE_PREFIX}}.Rules",
+      "replace": "Fixture.Rules"
+    },
+    {
+      "path": "tools/tests/test_rules_conformance_gate.py",
+      "search": "{{SOURCE_PREFIX}}.Data",
+      "replace": "Fixture.Data"
+    },
+    {
+      "path": "tools/tests/test_rules_conformance_gate.py",
+      "search": "{{SOURCE_PREFIX}}.Core",
+      "replace": "Fixture.Core"
+    },
+    {
+      "path": "tools/tests/test_rules_conformance_gate.py",
+      "search": "{{SOURCE_PREFIX}} Test",
+      "replace": "Framework Test"
+    },
+    {
+      "path": "tools/tests/test_review_packet.py",
+      "search": "SR6 Core",
+      "replace": "fixture-core"
+    },
+    {
+      "path": "tools/tests/test_review_packet.py",
+      "search": "{{SOURCE_PREFIX}}.Rules",
+      "replace": "Fixture.Rules"
+    },
+    {
+      "path": "tools/tests/test_review_packet.py",
+      "search": "{{SOURCE_PREFIX}}.Core",
+      "replace": "Fixture.Core"
+    },
+    {
+      "path": "tools/tests/test_review_packet.py",
+      "search": "{{SOURCE_PREFIX}} Test",
+      "replace": "Framework Test"
+    },
+    {
+      "path": "tools/tests/test_pr_policy.py",
+      "search": "{{SOURCE_PREFIX_LOWER}}-rules-surface-",
+      "replace": "framework-rules-surface-"
+    },
+    {
+      "path": "tools/tests/test_pr_policy.py",
+      "search": "author=\"brandonifco\"",
+      "replace": "author=\"example-user\""
+    },
+    {
+      "path": "tools/tests/test_pr_policy.py",
+      "search": "self.assertFalse(pr_policy.is_exempt(\"brandonifco\"))",
+      "replace": "self.assertFalse(pr_policy.is_exempt(\"example-user\"))"
+    },
+    {
+      "path": "tools/tests/test_rules_conformance_gate.py",
+      "search": "{{SOURCE_PREFIX_LOWER}}-verdict/",
+      "replace": "rules-verdict/"
+    },
+    {
+      "path": "tools/tests/test_rules_conformance_gate.py",
+      "search": "{{SOURCE_PREFIX_LOWER}}-gate-rules-surface-broken-",
+      "replace": "framework-gate-rules-surface-broken-"
+    },
+    {
+      "path": "tools/tests/test_rules_conformance_gate.py",
+      "search": "{{SOURCE_PREFIX_LOWER}}-rules-gate-",
+      "replace": "framework-rules-gate-"
+    },
+    {
+      "path": "tools/tests/test_rules_conformance_gate.py",
+      "search": "brandonifco",
+      "replace": "example-user"
+    },
+    {
+      "path": "tools/tests/test_review_packet.py",
+      "search": "{{SOURCE_PREFIX_LOWER}}-review-packet-",
+      "replace": "framework-review-packet-"
+    },
+    {
+      "path": "tools/tests/test_record_verdict.py",
+      "search": "{{SOURCE_PREFIX_LOWER}}-verdict/",
+      "replace": "rules-verdict/"
+    },
+    {
+      "path": "tools/tests/test_record_verdict.py",
+      "search": "{{SOURCE_PREFIX_LOWER}}-record-verdict-",
+      "replace": "framework-record-verdict-"
+    },
+    {
+      "path": "tools/tests/test_record_verdict.py",
+      "search": "brandonifco/{{SOURCE_PREFIX_LOWER}}",
+      "replace": "example/repo"
+    },
+    {
+      "path": "tools/lib/rules-surface.sh",
+      "search": "RULES_SURFACE_CONFIG=\"$RULES_SURFACE_REPO_ROOT/.github/rules-surface-paths.txt\"",
+      "replace": "RULES_SURFACE_CONFIG=\"${FRAMEWORK_RULES_SURFACE_CONFIG:-$RULES_SURFACE_REPO_ROOT/.github/rules-surface-paths.txt}\""
+    },
+    {
+      "path": "tools/tests/test_pr_policy.py",
+      "search": "import importlib.util\nimport shutil\n",
+      "replace": "import importlib.util\nimport os\nimport shutil\n"
+    },
+    {
+      "path": "tools/tests/test_pr_policy.py",
+      "search": "ROOT = Path(__file__).resolve().parents[2]\n\n_spec = importlib.util.spec_from_file_location(\"pr_policy\", ROOT / \"tools\" / \"pr-policy.py\")\n",
+      "replace": "ROOT = Path(__file__).resolve().parents[2]\n\n_RULES_CONFIG_TMP = tempfile.TemporaryDirectory(prefix=\"framework-pr-policy-rules-config-\")\n_RULES_CONFIG = Path(_RULES_CONFIG_TMP.name) / \"rules-surface-paths.txt\"\n_RULES_CONFIG.write_text(\n    \"src/Fixture.Rules/\\n\"\n    \"src/Fixture.Data/\\n\"\n    \"tests/Fixture.Rules.Tests/\\n\"\n    \"tests/Fixture.Data.Tests/\\n\",\n    encoding=\"utf-8\",\n)\nos.environ[\"FRAMEWORK_RULES_SURFACE_CONFIG\"] = str(_RULES_CONFIG)\n\n_spec = importlib.util.spec_from_file_location(\"pr_policy\", ROOT / \"tools\" / \"pr-policy.py\")\n"
+    },
+    {
+      "path": "tools/tests/test_pr_policy.py",
+      "search": "class SingleEditPropagationTests(unittest.TestCase):\n    \"\"\"Issue #89's central acceptance criterion, and the test that would have caught the\n    original drift: a change to the rules-surface directory definition in\n    tools/lib/rules-surface.sh ALONE -- no second edit to pr-policy.py -- must be picked\n    up by rules_files_in(). Proven by actually varying the definition (a temp copy of the\n    library with a widened directory regex, with pr_policy.RULES_SURFACE_LIB monkeypatched\n    to point at it) rather than asserting the sharing in prose. Two definitions that only\n    happen to agree today, as before this Issue, would pass every other test in this file\n    and still fail the one below.\n    \"\"\"\n\n    NEEDLE = \"(Rules|Data)/\"\n    REPLACEMENT = \"(Rules|Data|Foo)/\"\n    NEW_DIR_FILE = \"src/Fixture.Foo/Thing.cs\"\n\n    def setUp(self):\n        self.original_lib = pr_policy.RULES_SURFACE_LIB\n        self.original_text = self.original_lib.read_text(encoding=\"utf-8\")\n        self.assertIn(\n            self.NEEDLE, self.original_text,\n            \"fixture assumption broken: rules-surface.sh no longer spells the directory \"\n            \"regex the way this test expects to widen it\",\n        )\n        self.tmpdir = tempfile.mkdtemp(prefix=\"framework-rules-surface-\")\n        self.addCleanup(shutil.rmtree, self.tmpdir, ignore_errors=True)\n        self.addCleanup(setattr, pr_policy, \"RULES_SURFACE_LIB\", self.original_lib)\n        self.addCleanup(pr_policy._classify_rules_surface.cache_clear)\n\n    def _install(self, lib_text: str) -> None:\n        lib_path = Path(self.tmpdir) / \"rules-surface.sh\"\n        lib_path.write_text(lib_text, encoding=\"utf-8\")\n        pr_policy.RULES_SURFACE_LIB = lib_path\n        pr_policy._classify_rules_surface.cache_clear()\n\n    def test_control_stock_definition_does_not_classify_the_new_directory(self):\n        \"\"\"Control for the test below: an unmodified copy of the real library must NOT\n        already treat src/Fixture.Foo/ as a rules surface, or the widening test would\n        pass for the wrong reason.\"\"\"\n        self._install(self.original_text)\n        self.assertEqual(pr_policy.rules_files_in([self.NEW_DIR_FILE]), [])\n\n    def test_widening_the_directory_regex_alone_is_picked_up_with_no_pr_policy_edit(self):\n        \"\"\"Vary ONLY the copy of tools/lib/rules-surface.sh pr-policy.py is pointed at --\n        pr-policy.py's own source is never touched -- and confirm the new directory is\n        classified as a rules surface purely as a result of that one edit.\"\"\"\n        widened = self.original_text.replace(self.NEEDLE, self.REPLACEMENT, 1)\n        self.assertNotEqual(widened, self.original_text)\n        self._install(widened)\n        self.assertEqual(pr_policy.rules_files_in([self.NEW_DIR_FILE]), [self.NEW_DIR_FILE])\n",
+      "replace": "class SingleEditPropagationTests(unittest.TestCase):\n    \"\"\"Changing only the central rules-surface configuration changes classification.\"\"\"\n\n    NEW_DIR_FILE = \"src/Fixture.ExtraRules/Thing.cs\"\n\n    def setUp(self):\n        self.original_config = os.environ[\"FRAMEWORK_RULES_SURFACE_CONFIG\"]\n        self.tmpdir = tempfile.mkdtemp(prefix=\"framework-rules-surface-config-\")\n        self.addCleanup(shutil.rmtree, self.tmpdir, ignore_errors=True)\n        self.addCleanup(\n            os.environ.__setitem__,\n            \"FRAMEWORK_RULES_SURFACE_CONFIG\",\n            self.original_config,\n        )\n        self.addCleanup(pr_policy._classify_rules_surface.cache_clear)\n\n    def _install(self, entries: str) -> None:\n        config = Path(self.tmpdir) / \"rules-surface-paths.txt\"\n        config.write_text(entries, encoding=\"utf-8\")\n        os.environ[\"FRAMEWORK_RULES_SURFACE_CONFIG\"] = str(config)\n        pr_policy._classify_rules_surface.cache_clear()\n\n    def test_control_stock_definition_does_not_classify_the_new_directory(self):\n        self._install(\n            \"src/Fixture.Rules/\\n\"\n            \"src/Fixture.Data/\\n\"\n            \"tests/Fixture.Rules.Tests/\\n\"\n            \"tests/Fixture.Data.Tests/\\n\"\n        )\n        self.assertEqual(pr_policy.rules_files_in([self.NEW_DIR_FILE]), [])\n\n    def test_widening_the_central_config_alone_is_picked_up_with_no_pr_policy_edit(self):\n        self._install(\n            \"src/Fixture.Rules/\\n\"\n            \"src/Fixture.Data/\\n\"\n            \"tests/Fixture.Rules.Tests/\\n\"\n            \"tests/Fixture.Data.Tests/\\n\"\n            \"src/Fixture.ExtraRules/\\n\"\n        )\n        self.assertEqual(\n            pr_policy.rules_files_in([self.NEW_DIR_FILE]),\n            [self.NEW_DIR_FILE],\n        )\n"
+    },
+    {
+      "path": "tools/tests/test_rules_conformance_gate.py",
+      "search": "ROOT = Path(__file__).resolve().parents[2]\n",
+      "replace": "ROOT = Path(__file__).resolve().parents[2]\n\n_RULES_CONFIG_TMP = tempfile.TemporaryDirectory(prefix=\"framework-gate-rules-config-\")\n_RULES_CONFIG = Path(_RULES_CONFIG_TMP.name) / \"rules-surface-paths.txt\"\n_RULES_CONFIG.write_text(\n    \"src/Fixture.Rules/\\n\"\n    \"src/Fixture.Data/\\n\"\n    \"tests/Fixture.Rules.Tests/\\n\"\n    \"tests/Fixture.Data.Tests/\\n\",\n    encoding=\"utf-8\",\n)\nos.environ[\"FRAMEWORK_RULES_SURFACE_CONFIG\"] = str(_RULES_CONFIG)\n"
+    },
+    {
+      "path": "tools/tests/test_review_packet.py",
+      "search": "ROOT = Path(__file__).resolve().parents[2]\n",
+      "replace": "ROOT = Path(__file__).resolve().parents[2]\n\n_RULES_CONFIG_TMP = tempfile.TemporaryDirectory(prefix=\"framework-review-rules-config-\")\n_RULES_CONFIG = Path(_RULES_CONFIG_TMP.name) / \"rules-surface-paths.txt\"\n_RULES_CONFIG.write_text(\n    \"src/Fixture.Rules/\\n\"\n    \"src/Fixture.Data/\\n\"\n    \"tests/Fixture.Rules.Tests/\\n\"\n    \"tests/Fixture.Data.Tests/\\n\",\n    encoding=\"utf-8\",\n)\nos.environ[\"FRAMEWORK_RULES_SURFACE_CONFIG\"] = str(_RULES_CONFIG)\n"
     }
   ]
 }
