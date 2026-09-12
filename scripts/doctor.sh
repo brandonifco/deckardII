@@ -38,7 +38,8 @@ bad()  { printf '  %sFAIL%s  %-22s %s\n' "$RED" "$OFF" "$1" "${2:-}"; PROBLEMS=$
 hint() { printf '        %s\n' "$1"; }
 section() { printf '\n%s%s%s\n' "$BOLD" "$1" "$OFF"; }
 
-printf '%sDeckard environment report%s\n' "$BOLD" "$OFF"
+REPO_NAME="$(basename "$REPO_ROOT")"
+printf '%s%s environment report%s\n' "$BOLD" "$REPO_NAME" "$OFF"
 
 # ------------------------------------------------------------------------ tooling
 section "Tooling"
@@ -74,12 +75,12 @@ if command -v dotnet >/dev/null 2>&1; then
       ok ".NET SDK" "$actual (matches global.json pin, from $dotnet_origin)"
     else
       bad ".NET SDK" "have $actual, global.json pins $pinned (from $dotnet_origin)"
-      hint "Deckard pins an exact patch with rollForward=disable."
+      hint "This repository pins an exact patch with rollForward=disable."
       hint "./scripts/bootstrap-dotnet.sh"
     fi
   else
     bad ".NET SDK" "cannot satisfy global.json's pin of $pinned (from $dotnet_origin)"
-    hint "Deckard pins an exact patch with rollForward=disable."
+    hint "This repository pins an exact patch with rollForward=disable."
     hint "./scripts/bootstrap-dotnet.sh"
   fi
 else bad ".NET SDK" "not found"; fi
@@ -94,7 +95,7 @@ if command -v pdftotext >/dev/null 2>&1; then
     ok "pdftotext" "$poppler_actual (matches CI's pin)"
   else
     # Not `bad`: this never blocks a build or a test, only whether two packets
-    # extracted on different machines are provably identical. Deckard does not vendor
+    # extracted on different machines are provably identical. This repository does not vendor
     # Poppler, so this cannot be forced to match -- see docs/source-handling.md.
     warn "pdftotext" "$poppler_actual (CI pins $poppler_pinned in .github/poppler-version.json)"
     hint "Every packet still records its own extractor/extractorVersion/bodySha256, so a"

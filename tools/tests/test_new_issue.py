@@ -61,7 +61,7 @@ Determine glitches and critical glitches.
 
 class NewIssueTests(unittest.TestCase):
     def setUp(self) -> None:
-        self.tmp = Path(tempfile.mkdtemp(prefix="deckard-issue-"))
+        self.tmp = Path(tempfile.mkdtemp(prefix="framework-issue-"))
         self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
 
     def editor_writing(self, body: str) -> str:

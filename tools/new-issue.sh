@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# new-issue.sh -- file a structured Deckard Issue from the command line.
+# new-issue.sh -- file a structured framework Issue from the command line.
 #
 #   tools/new-issue.sh --title "Implement PCG32 random source" \
 #                      --label area:core --label phase:1-kernel
@@ -88,7 +88,7 @@ if [[ "$DRY_RUN" -eq 1 ]]; then
   exit 0
 fi
 
-BODY_FILE="$(mktemp -t deckard-issue-XXXXXX.md)"
+BODY_FILE="$(mktemp -t framework-issue-XXXXXX.md)"
 trap 'rm -f "$BODY_FILE"' EXIT
 printf '%s\n' "$TEMPLATE" > "$BODY_FILE"
 

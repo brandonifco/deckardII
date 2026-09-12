@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# validate.sh -- the single canonical gate for Deckard.
+# validate.sh -- the single canonical gate for this framework repository.
 #
 # Humans call it. Claude calls it. Subagents call it. CI calls it. There is exactly one
 # definition of "this change is acceptable", and it lives here rather than being
@@ -208,7 +208,7 @@ run "repo-checks" tools/repo-checks.py || true
 # ------------------------------------------------------------- tooling tests
 step "Tooling tests"
 # `unittest` exits 0 when tests SKIP, so a skipped suite is indistinguishable from a
-# passing one by exit code alone. Deckard's tooling tests are the only proof the source
+# passing one by exit code alone. The tooling tests are the only proof the source
 # boundary works, so a skip here is a failure, not a note.
 # `|| tooling_status=$?` is load-bearing: under `set -e`, a bare
 # `var=$(failing-command)` terminates the shell immediately, which would skip the FAIL

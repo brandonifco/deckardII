@@ -23,11 +23,6 @@
       "count": 2
     },
     {
-      "path": ".github/workflows/build-and-test.yml",
-      "pattern": "source-prefix-exact",
-      "count": 2
-    },
-    {
       "path": ".github/workflows/rules-conformance-gate.yml",
       "pattern": "source-prefix-exact",
       "count": 2
@@ -43,29 +38,14 @@
       "count": 1
     },
     {
-      "path": "scripts/doctor.sh",
-      "pattern": "source-prefix-exact",
-      "count": 3
-    },
-    {
       "path": "scripts/validate.sh",
       "pattern": "source-prefix-exact",
-      "count": 3
+      "count": 1
     },
     {
       "path": "tools/new-issue.sh",
       "pattern": "domain-sr6",
       "count": 2
-    },
-    {
-      "path": "tools/new-issue.sh",
-      "pattern": "source-prefix-exact",
-      "count": 1
-    },
-    {
-      "path": "tools/new-issue.sh",
-      "pattern": "source-prefix-lower",
-      "count": 1
     },
     {
       "path": "tools/pr-policy.py",
@@ -135,11 +115,6 @@
     {
       "path": "tools/tests/test_new_issue.py",
       "pattern": "domain-sr6",
-      "count": 1
-    },
-    {
-      "path": "tools/tests/test_new_issue.py",
-      "pattern": "source-prefix-lower",
       "count": 1
     },
     {

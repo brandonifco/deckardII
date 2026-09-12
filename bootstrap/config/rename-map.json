@@ -120,6 +120,56 @@
       "path": "tools/tests/test_primary_checkout_guard.py",
       "search": "{{SOURCE_PREFIX_LOWER}}-guard-",
       "replace": "framework-guard-"
+    },
+    {
+      "path": "scripts/doctor.sh",
+      "search": "printf '%s{{SOURCE_PREFIX}} environment report%s\\n' \"$BOLD\" \"$OFF\"",
+      "replace": "REPO_NAME=\"$(basename \"$REPO_ROOT\")\"\nprintf '%s%s environment report%s\\n' \"$BOLD\" \"$REPO_NAME\" \"$OFF\""
+    },
+    {
+      "path": "scripts/doctor.sh",
+      "search": "hint \"{{SOURCE_PREFIX}} pins an exact patch with rollForward=disable.\"",
+      "replace": "hint \"This repository pins an exact patch with rollForward=disable.\""
+    },
+    {
+      "path": "scripts/doctor.sh",
+      "search": "# extracted on different machines are provably identical. {{SOURCE_PREFIX}} does not vendor",
+      "replace": "# extracted on different machines are provably identical. This repository does not vendor"
+    },
+    {
+      "path": "scripts/validate.sh",
+      "search": "# validate.sh -- the single canonical gate for {{SOURCE_PREFIX}}.",
+      "replace": "# validate.sh -- the single canonical gate for this framework repository."
+    },
+    {
+      "path": "scripts/validate.sh",
+      "search": "# passing one by exit code alone. {{SOURCE_PREFIX}}'s tooling tests are the only proof the source",
+      "replace": "# passing one by exit code alone. The tooling tests are the only proof the source"
+    },
+    {
+      "path": "tools/new-issue.sh",
+      "search": "# new-issue.sh -- file a structured {{SOURCE_PREFIX}} Issue from the command line.",
+      "replace": "# new-issue.sh -- file a structured framework Issue from the command line."
+    },
+    {
+      "path": "tools/new-issue.sh",
+      "search": "BODY_FILE=\"$(mktemp -t {{SOURCE_PREFIX_LOWER}}-issue-XXXXXX.md)\"",
+      "replace": "BODY_FILE=\"$(mktemp -t framework-issue-XXXXXX.md)\""
+    },
+    {
+      "path": "tools/tests/test_new_issue.py",
+      "search": "prefix=\"{{SOURCE_PREFIX_LOWER}}-issue-\"",
+      "replace": "prefix=\"framework-issue-\""
+    },
+    {
+      "path": ".github/workflows/build-and-test.yml",
+      "search": "# {{SOURCE_PREFIX}} has exactly one definition of \"acceptable\": ./scripts/validate.sh full.",
+      "replace": "# This repository has exactly one definition of \"acceptable\": ./scripts/validate.sh full."
+    },
+    {
+      "path": ".github/workflows/build-and-test.yml",
+      "search": "# {{SOURCE_PREFIX}} does not vendor Poppler (docs/source-handling.md), so apt is not asked",
+      "replace": "# This repository does not vendor Poppler (docs/source-handling.md), so apt is not asked"
     }
   ]
 }
