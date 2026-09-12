@@ -16,12 +16,12 @@
   "extraction": {
     "approvedManifestEntries": 27,
     "approvedTrackedFiles": 40,
-    "mechanicallyTransformedFiles": 27,
+    "mechanicallyTransformedFiles": 29,
     "declaredStructureDirectories": 5
   },
   "knownContaminationDebt": {
-    "occurrences": 94,
-    "buckets": 11
+    "occurrences": 5,
+    "buckets": 5
   },
   "validation": {
     "declaredChecks": 8

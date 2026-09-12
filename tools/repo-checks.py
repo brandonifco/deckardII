@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""repo-checks -- mechanical enforcement of Deckard's written invariants.
+"""repo-checks -- mechanical enforcement of repository invariants.
 
 Every check here exists because the alternative is trusting an agent to remember a
 rule stated in prose. Prose does not fail a build. These do.
@@ -10,8 +10,6 @@ rule stated in prose. Prose does not fail a build. These do.
 Checks:
   text-hygiene   UTF-8, no BOM, LF endings, exactly one trailing newline
   determinism    no ambient randomness or ambient time in engine source
-  layering       declared ProjectReference graph matches docs/architecture.md
-  core-filesystem  Deckard.Core touches no filesystem API (ADR 0001)
   source-boundary  no rulebook, no source packet, no local source path committed
   action-pins    third-party GitHub Actions pinned to immutable commit SHAs
   readonly-agents  agents claiming to be read-only carry no write-capable tool
@@ -104,51 +102,32 @@ BANNED_IN_ENGINE: list[tuple[str, str, str]] = [
 ]
 
 # An engine file may opt out only with an explicit, reviewed justification on the line.
-ALLOW_MARKER = "deckard:allow-nondeterminism"
+ALLOW_MARKER = "framework:allow-nondeterminism"
 
-# The declared dependency graph. Core is the floor; nothing may point upward.
+# Authoritative-source boundary markers and local-path leak detection.
 # Files that legitimately mention the source boundary machinery: the tool that emits
 # packets, the checker that hunts for them, and the doc that explains both. Everything
-# else mentioning a packet marker or a local rulebook path is a leak.
-PACKET_MARKER = "DECKARD SOURCE" + " PACKET"
+# else mentioning a packet marker or a local authoritative-source path is a leak.
+PACKET_MARKER = "AUTHORITATIVE SOURCE" + " PACKET"
 # Any absolute path into somebody's home directory. Deliberately generic rather than
 # naming a particular file: the checker should not need to know, or publish, what
-# Brandon called his copy.
+# a developer called their local copy.
 LOCAL_PATH_LEAK = re.compile(r"(?:/home/|/Users/|/root/)[A-Za-z0-9_.\-]+/")
 # Exemptions are PER CHECK, not per file. A blanket allowlist previously disabled BOTH
 # checks on docs/source-handling.md -- the single document most likely to acquire a real
 # local path in an example, and the one with least reason to be exempt from that check.
 # Each entry below is exempt from exactly the one check it genuinely needs to be.
 PACKET_MARKER_EXEMPT = {
+    "bootstrap/config/rename-map.json", # stores literal transformation fixtures
     "tools/source-slice.py",            # emits the marker
     "tools/repo-checks.py",             # searches for the marker
     "tools/tests/test_repo_checks.py",  # asserts on the marker
 }
 LOCAL_PATH_EXEMPT = {
+    "bootstrap/config/rename-map.json", # stores literal transformation fixtures
     "tools/repo-checks.py",             # defines the pattern
     "tools/tests/test_repo_checks.py",  # builds fake paths as fixtures
 }
-
-ALLOWED_PROJECT_REFS: dict[str, set[str]] = {
-    "Deckard.Core": set(),
-    "Deckard.Data": {"Deckard.Core"},
-    "Deckard.Rules": {"Deckard.Core", "Deckard.Data"},
-    # Deckard.Testing is test-support code, not a fourth engine layer: it lives under
-    # tests/, ships to nobody, and may see only Core. See amendment to ADR 0001.
-    "Deckard.Testing": {"Deckard.Core"},
-}
-
-# Where each project above actually lives. check_layering used to assume every project
-# sat under src/<name>/ -- true while the graph was exactly Core, Data, Rules. Deckard.Testing
-# lives under tests/ instead, so the directory is now looked up per project rather than
-# hard-coded.
-PROJECT_DIRS: dict[str, str] = {
-    "Deckard.Core": "src/Deckard.Core",
-    "Deckard.Data": "src/Deckard.Data",
-    "Deckard.Rules": "src/Deckard.Rules",
-    "Deckard.Testing": "tests/Deckard.Testing",
-}
-
 
 class Failure(str):
     """A single human-readable check failure."""
@@ -211,91 +190,8 @@ def check_determinism(root: Path) -> list[Failure]:
     return failures
 
 
-def check_layering(root: Path) -> list[Failure]:
-    failures: list[Failure] = []
-    for project, allowed in ALLOWED_PROJECT_REFS.items():
-        csproj = root / PROJECT_DIRS[project] / f"{project}.csproj"
-        if not csproj.is_file():
-            failures.append(Failure(f"missing expected project: {csproj.relative_to(root)}"))
-            continue
-        text = csproj.read_text(encoding="utf-8")
-        declared = {
-            Path(m).stem
-            for m in re.findall(r'ProjectReference\s+Include="([^"]+)"', text)
-        }
-        extra = declared - allowed
-        if extra:
-            failures.append(
-                Failure(
-                    f"{project} declares forbidden ProjectReference(s): {sorted(extra)}; "
-                    f"allowed: {sorted(allowed) or 'none'}"
-                )
-            )
-    return failures
-
-
-# --------------------------------------------------------------------------------
-# Core filesystem boundary (ADR 0001; docs/architecture.md). Scoped to Deckard.Core
-# alone, not folded into BANNED_IN_ENGINE above: that list is deliberately
-# engine-wide, but Deckard.Data's structured-data loaders will legitimately read
-# files once Data exists, and a ban firing there would be wrong.
-#
-# Each pattern requires an actual call-site shape (a member access immediately
-# followed by an identifier or a call, not a bare word) so it cannot match an
-# ordinary sentence -- Core's own doc comments legitimately discuss this exact
-# boundary (see Deckard.Core.Replay.SourceBaselineId, ADR 0005). Comment-only lines
-# are skipped as a second, independent safeguard.
-# --------------------------------------------------------------------------------
-CORE_FILESYSTEM_APIS: list[tuple[str, str]] = [
-    (r"\bSystem\.IO\.[A-Za-z]", "fully-qualified System.IO member access"),
-    (r"\bFile\.[A-Za-z]", "System.IO.File"),
-    (r"\bFileInfo\b", "System.IO.FileInfo"),
-    (r"\bDirectory\.[A-Za-z]", "System.IO.Directory"),
-    (r"\bDirectoryInfo\b", "System.IO.DirectoryInfo"),
-    (r"\bFileStream\b", "System.IO.FileStream"),
-    (r"\bStreamReader\b", "System.IO.StreamReader"),
-    (r"\bStreamWriter\b", "System.IO.StreamWriter"),
-    (r"\bPath\.[A-Za-z]+\(", "System.IO.Path"),
-]
-CORE_COMMENT_LINE = re.compile(r"^\s*(?://|\*)")
-
-
-def check_core_filesystem_boundary(root: Path) -> list[Failure]:
-    """Deckard.Core may not touch the filesystem -- ADR 0001, docs/architecture.md.
-
-    CORE_COMMENT_LINE only recognises a WHOLE-LINE comment (a line whose first
-    non-whitespace characters are `//` or `*`). A trailing comment on a code line --
-    `var x = 1; // mentions File.ReadAllText` -- is still scanned in full and would be
-    caught. This is a deliberate simplification, not an oversight: correctly stripping a
-    trailing comment requires tracking string and char literals so a `//` inside one is
-    not mistaken for a comment start, which is more machinery than this check's job
-    justifies. Nothing in Core trips this today; if it ever does, move the mention to its
-    own comment line rather than teaching this check string-literal awareness.
-    """
-    failures: list[Failure] = []
-    core = root / "src" / "Deckard.Core"
-    if not core.is_dir():
-        return failures
-    for path in sorted(core.rglob("*.cs")):
-        if any(part in {"obj", "bin"} for part in path.parts):
-            continue
-        rel = path.relative_to(root)
-        for lineno, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
-            if CORE_COMMENT_LINE.match(line):
-                continue
-            for pattern, api in CORE_FILESYSTEM_APIS:
-                if re.search(pattern, line):
-                    failures.append(
-                        Failure(
-                            f"{rel}:{lineno}: Core must not touch the filesystem "
-                            f"(ADR 0001) -- {api}  [{line.strip()[:70]}]"
-                        )
-                    )
-    return failures
-
-
 def check_source_boundary(root: Path) -> list[Failure]:
-    """The rulebook is commercial copyrighted material. Nothing derived from it ships."""
+    """Authoritative-source files, extracted packets, and local source paths must not ship."""
     failures: list[Failure] = []
     manifest_path = root / ".github" / "source-manifest.json"
 
@@ -304,7 +200,7 @@ def check_source_boundary(root: Path) -> list[Failure]:
         posix = rel.as_posix()
 
         if path.suffix.lower() in {".pdf", ".epub", ".mobi"}:
-            failures.append(Failure(f"{rel}: rulebook-shaped binary is tracked in git"))
+            failures.append(Failure(f"{rel}: authoritative-source-shaped binary is tracked in git"))
 
         text = decode_text(path)
         if text is None:
@@ -328,7 +224,7 @@ def check_source_boundary(root: Path) -> list[Failure]:
                         Failure(
                             f"source-manifest.json: {entry.get('sourceId')} carries a local "
                             f"'{forbidden}'; the local path belongs in "
-                            f"${entry.get('envVar', 'SR6_CORE_PDF')}, never in git"
+                            f"${entry.get('envVar', 'SOURCE_FILE')}, never in git"
                         )
                     )
     return failures
@@ -446,11 +342,9 @@ BAN_LIST_RESTATEMENTS = ("docs/architecture.md", ".claude/agents/engine-dev.md")
 def check_invariant_drift(root: Path) -> list[Failure]:
     """Prose restatements of a single-authority fact must match the authority.
 
-    Restating an invariant where an agent will actually read it is worth the duplication.
-    Unchecked duplication is not: the ban list lived in five documents and had already
-    drifted at one hour old, and the manifest's page offset was restated in four places
-    that a printing change would leave confidently wrong -- the exact off-by-one ADR 0003
-    says the manifest exists to prevent.
+    The determinism ban list and bounded source-packet limit are deliberately restated in
+    prose where agents need them. This check keeps those restatements tied to their
+    executable authorities.
     """
     failures: list[Failure] = []
     expected = {display for display, _pattern, _why in BANNED_IN_ENGINE}
@@ -468,38 +362,6 @@ def check_invariant_drift(root: Path) -> list[Failure]:
                     "authority is BANNED_IN_ENGINE in tools/repo-checks.py"
                 )
             )
-
-    # --- manifest facts -------------------------------------------------------------
-    manifest_path = root / ".github" / "source-manifest.json"
-    if manifest_path.is_file():
-        entry = json.loads(manifest_path.read_text(encoding="utf-8"))["sources"][0]
-        offset = entry["pageNumbering"]["printedPageEqualsPdfPageMinus"]
-        page_count = entry["pdfPageCount"]
-
-        offset_claim = re.compile(r"PDF page\s*[-−]\s*(\d+)")
-        count_claim = re.compile(r"(\d+)\s*(?:PDF pages|pages\b(?=[^.]*\bPDF))")
-
-        for path in sorted((root / "docs").rglob("*.md")) + sorted(
-            (root / ".claude").rglob("*.md")
-        ):
-            rel = path.relative_to(root).as_posix()
-            text = path.read_text(encoding="utf-8")
-            for match in offset_claim.finditer(text):
-                if int(match.group(1)) != offset:
-                    failures.append(
-                        Failure(
-                            f"{rel}: states 'PDF page - {match.group(1)}' but the manifest "
-                            f"says {offset}"
-                        )
-                    )
-            for match in count_claim.finditer(text):
-                if int(match.group(1)) != page_count:
-                    failures.append(
-                        Failure(
-                            f"{rel}: states {match.group(1)} PDF pages but the manifest "
-                            f"says {page_count}"
-                        )
-                    )
 
     # --- packet size limit ----------------------------------------------------------
     slice_tool = root / "tools" / "source-slice.py"
@@ -561,8 +423,6 @@ def check_single_queue(root: Path) -> list[Failure]:
 CHECKS = {
     "text-hygiene": check_text_hygiene,
     "determinism": check_determinism,
-    "layering": check_layering,
-    "core-filesystem": check_core_filesystem_boundary,
     "source-boundary": check_source_boundary,
     "action-pins": check_action_pins,
     "readonly-agents": check_readonly_agents,

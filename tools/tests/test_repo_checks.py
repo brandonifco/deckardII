@@ -27,7 +27,7 @@ class FixtureRepo:
     """A throwaway git repository, because several checks read `git ls-files`."""
 
     def __init__(self) -> None:
-        self.root = Path(tempfile.mkdtemp(prefix="deckard-checks-"))
+        self.root = Path(tempfile.mkdtemp(prefix="framework-checks-"))
         subprocess.run(["git", "init", "-q", "-b", "main"], cwd=self.root, check=True)
 
     def write(self, rel: str, content: bytes | str, *, track: bool = True) -> Path:
@@ -82,209 +82,52 @@ class TextHygieneTests(CheckTestCase):
 
 
 class DeterminismTests(CheckTestCase):
-    CLEAN = "namespace Deckard.Core;\npublic sealed class Roller { }\n"
+    CLEAN = "namespace Framework.Core;\npublic sealed class Roller { }\n"
 
     def test_clean_engine_source_passes(self):
-        self.repo.write("src/Deckard.Core/Roller.cs", self.CLEAN)
+        self.repo.write("src/Framework.Core/Roller.cs", self.CLEAN)
         self.assertEqual(repo_checks.check_determinism(self.repo.root), [])
 
     def test_random_shared_is_caught(self):
-        self.repo.write("src/Deckard.Core/R.cs", "var x = Random.Shared.Next();\n")
+        self.repo.write("src/Framework.Core/R.cs", "var x = Random.Shared.Next();\n")
         self.assertCaught(repo_checks.check_determinism(self.repo.root), "Random.Shared")
 
     def test_new_random_is_caught(self):
-        self.repo.write("src/Deckard.Core/R.cs", "var r = new Random(42);\n")
+        self.repo.write("src/Framework.Core/R.cs", "var r = new Random(42);\n")
         self.assertCaught(repo_checks.check_determinism(self.repo.root), "IRandomSource")
 
     def test_datetime_now_is_caught(self):
-        self.repo.write("src/Deckard.Rules/R.cs", "var t = DateTime.UtcNow;\n")
+        self.repo.write("src/Framework.Rules/R.cs", "var t = DateTime.UtcNow;\n")
         self.assertCaught(repo_checks.check_determinism(self.repo.root), "ambient clock")
 
     def test_guid_newguid_is_caught(self):
-        self.repo.write("src/Deckard.Core/R.cs", "var id = Guid.NewGuid();\n")
+        self.repo.write("src/Framework.Core/R.cs", "var id = Guid.NewGuid();\n")
         self.assertCaught(repo_checks.check_determinism(self.repo.root), "non-reproducible")
 
     def test_parallelism_is_caught(self):
-        self.repo.write("src/Deckard.Rules/R.cs", "items.AsParallel().Select(x => x);\n")
+        self.repo.write("src/Framework.Rules/R.cs", "items.AsParallel().Select(x => x);\n")
         self.assertCaught(repo_checks.check_determinism(self.repo.root), "non-deterministic")
 
     def test_tests_are_not_scanned(self):
         """Test code may legitimately construct a seeded Random to build fixtures."""
-        self.repo.write("tests/Deckard.Core.Tests/T.cs", "var r = new Random(1);\n")
+        self.repo.write("tests/Framework.Core.Tests/T.cs", "var r = new Random(1);\n")
         self.assertEqual(repo_checks.check_determinism(self.repo.root), [])
 
     def test_explicit_marker_allows_an_exception(self):
         self.repo.write(
-            "src/Deckard.Core/R.cs",
-            "var t = DateTime.UtcNow; // deckard:allow-nondeterminism diagnostics only\n",
+            "src/Framework.Core/R.cs",
+            "var t = DateTime.UtcNow; // framework:allow-nondeterminism diagnostics only\n",
         )
         self.assertEqual(repo_checks.check_determinism(self.repo.root), [])
 
     def test_generated_obj_output_is_skipped(self):
-        self.repo.write("src/Deckard.Core/obj/Debug/G.cs", "var x = Random.Shared.Next();\n")
+        self.repo.write("src/Framework.Core/obj/Debug/G.cs", "var x = Random.Shared.Next();\n")
         self.assertEqual(repo_checks.check_determinism(self.repo.root), [])
-
-
-class LayeringTests(CheckTestCase):
-    def _project(self, name: str, refs: list[str]) -> None:
-        # Each project is written at its real location (PROJECT_DIRS), not assumed to be
-        # under src/ -- Deckard.Testing lives under tests/ instead, and this fixture
-        # exercises the same lookup check_layering itself uses.
-        location = repo_checks.PROJECT_DIRS.get(name, f"src/{name}")
-        body = "\n".join(
-            f'    <ProjectReference Include="../../{repo_checks.PROJECT_DIRS.get(r, f"src/{r}")}/{r}.csproj" />'
-            for r in refs
-        )
-        self.repo.write(
-            f"{location}/{name}.csproj",
-            f"<Project Sdk=\"Microsoft.NET.Sdk\">\n  <ItemGroup>\n{body}\n  </ItemGroup>\n</Project>\n",
-        )
-
-    def _all_projects(self, **overrides: list[str]) -> None:
-        """Write every project in ALLOWED_PROJECT_REFS with its correct graph, except
-        for names present in `overrides`, which get the given (possibly violating) refs
-        instead. Keeps each test focused on the one edge it is checking."""
-        graph = {
-            "Deckard.Core": [],
-            "Deckard.Data": ["Deckard.Core"],
-            "Deckard.Rules": ["Deckard.Core", "Deckard.Data"],
-            "Deckard.Testing": ["Deckard.Core"],
-        }
-        graph.update(overrides)
-        for name, refs in graph.items():
-            self._project(name, refs)
-
-    def test_declared_graph_matching_the_spec_passes(self):
-        self._all_projects()
-        self.assertEqual(repo_checks.check_layering(self.repo.root), [])
-
-    def test_core_depending_upward_is_caught(self):
-        self._all_projects(**{"Deckard.Core": ["Deckard.Rules"]})
-        self.assertCaught(repo_checks.check_layering(self.repo.root), "Deckard.Core declares forbidden")
-
-    def test_data_depending_on_rules_is_caught(self):
-        self._all_projects(**{"Deckard.Data": ["Deckard.Core", "Deckard.Rules"]})
-        self.assertCaught(repo_checks.check_layering(self.repo.root), "Deckard.Data declares forbidden")
-
-    def test_missing_project_is_caught(self):
-        self._project("Deckard.Core", [])
-        self.assertCaught(repo_checks.check_layering(self.repo.root), "missing expected project")
-
-    def test_src_project_referencing_testing_is_caught(self):
-        """The load-bearing rule this Issue adds: nothing under src/ may pull in the
-        test-support project, or the type it carries walks straight back into the
-        shipped graph."""
-        self._all_projects(**{"Deckard.Rules": ["Deckard.Core", "Deckard.Data", "Deckard.Testing"]})
-        self.assertCaught(repo_checks.check_layering(self.repo.root), "Deckard.Rules declares forbidden")
-
-    def test_testing_project_referencing_anything_but_core_is_caught(self):
-        """Deckard.Testing may see Core and nothing else -- not Data, not Rules."""
-        self._all_projects(**{"Deckard.Testing": ["Deckard.Core", "Deckard.Data"]})
-        self.assertCaught(repo_checks.check_layering(self.repo.root), "Deckard.Testing declares forbidden")
-
-
-class CoreFilesystemBoundaryTests(CheckTestCase):
-    """See ADR 0005 / Issue #38: Deckard.Core may not touch the filesystem (ADR 0001)."""
-
-    def test_clean_core_source_passes(self):
-        self.repo.write(
-            "src/Deckard.Core/Replay/RandomAlgorithmId.cs",
-            "namespace Deckard.Core.Replay;\npublic readonly record struct RandomAlgorithmId(string Name);\n",
-        )
-        self.assertEqual(repo_checks.check_core_filesystem_boundary(self.repo.root), [])
-
-    def test_file_readalltext_is_caught(self):
-        self.repo.write(
-            "src/Deckard.Core/Leak.cs",
-            "var text = File.ReadAllText(path);\n",
-        )
-        self.assertCaught(
-            repo_checks.check_core_filesystem_boundary(self.repo.root), "touch the filesystem"
-        )
-
-    def test_fully_qualified_system_io_is_caught(self):
-        self.repo.write(
-            "src/Deckard.Core/Leak.cs",
-            "var text = System.IO.File.ReadAllText(path);\n",
-        )
-        self.assertCaught(
-            repo_checks.check_core_filesystem_boundary(self.repo.root), "touch the filesystem"
-        )
-
-    def test_directory_enumeration_is_caught(self):
-        self.repo.write(
-            "src/Deckard.Core/Leak.cs",
-            "foreach (var f in Directory.GetFiles(root)) { }\n",
-        )
-        self.assertCaught(
-            repo_checks.check_core_filesystem_boundary(self.repo.root), "touch the filesystem"
-        )
-
-    def test_streamreader_is_caught(self):
-        self.repo.write(
-            "src/Deckard.Core/Leak.cs",
-            "using var reader = new StreamReader(path);\n",
-        )
-        self.assertCaught(
-            repo_checks.check_core_filesystem_boundary(self.repo.root), "touch the filesystem"
-        )
-
-    def test_prose_mentioning_the_boundary_is_not_caught(self):
-        """A doc comment explaining this exact rule must not trip the rule it explains --
-        this is the ADR 0005 review finding: Core's own comments legitimately say things
-        like 'Core touches no filesystem' and 'System.IO.File', which must stay legible
-        without becoming false positives."""
-        self.repo.write(
-            "src/Deckard.Core/Replay/SourceBaselineId.cs",
-            "namespace Deckard.Core.Replay;\n\n"
-            "/// <summary>\n"
-            "/// A value passed in, never read: Deckard.Core touches no filesystem, so this\n"
-            "/// type has no knowledge of System.IO.File or where the manifest lives.\n"
-            "/// </summary>\n"
-            "public readonly record struct SourceBaselineId(string SourceId);\n",
-        )
-        self.assertEqual(repo_checks.check_core_filesystem_boundary(self.repo.root), [])
-
-    def test_data_project_is_not_scanned(self):
-        """Data's structured-data loaders will legitimately read files; only Core is banned."""
-        self.repo.write(
-            "src/Deckard.Data/Loader.cs",
-            "var text = File.ReadAllText(path);\n",
-        )
-        self.assertEqual(repo_checks.check_core_filesystem_boundary(self.repo.root), [])
-
-    def test_tests_are_not_scanned(self):
-        self.repo.write(
-            "tests/Deckard.Core.Tests/T.cs",
-            "var text = File.ReadAllText(path);\n",
-        )
-        self.assertEqual(repo_checks.check_core_filesystem_boundary(self.repo.root), [])
-
-    def test_generated_obj_output_is_skipped(self):
-        self.repo.write(
-            "src/Deckard.Core/obj/Debug/Deckard.Core.GlobalUsings.g.cs",
-            "global using System.IO;\n",
-        )
-        self.assertEqual(repo_checks.check_core_filesystem_boundary(self.repo.root), [])
-
-    def test_trailing_comment_on_a_code_line_is_still_caught(self):
-        """Documents a known, deliberate limitation rather than leaving it unverified:
-        CORE_COMMENT_LINE only recognises a whole-line comment. A trailing comment on a
-        code line is not stripped first, so it is scanned along with the code and can
-        still trip the check -- unlike a comment occupying its own line, which
-        test_prose_mentioning_the_boundary_is_not_caught proves is safe."""
-        self.repo.write(
-            "src/Deckard.Core/Leak.cs",
-            "var x = 1; // mentions File.ReadAllText in passing\n",
-        )
-        self.assertCaught(
-            repo_checks.check_core_filesystem_boundary(self.repo.root), "touch the filesystem"
-        )
 
 
 class SourceBoundaryTests(CheckTestCase):
     def test_clean_repo_passes(self):
-        self.repo.write("docs/architecture.md", "Deckard layering.\n")
+        self.repo.write("docs/architecture.md", "Framework layering.\n")
         self.assertEqual(repo_checks.check_source_boundary(self.repo.root), [])
 
     def test_tracked_pdf_is_caught(self):
@@ -292,16 +135,16 @@ class SourceBoundaryTests(CheckTestCase):
         self.assertCaught(repo_checks.check_source_boundary(self.repo.root), "tracked in git")
 
     def test_committed_source_packet_is_caught(self):
-        marker = "DECKARD SOURCE" + " PACKET"
+        marker = "AUTHORITATIVE SOURCE" + " PACKET"
         self.repo.write("docs/notes.md", f"{marker} -- pasted rulebook text follows\n")
         self.assertCaught(repo_checks.check_source_boundary(self.repo.root), "extracted source packet")
 
     def test_leaked_local_source_path_is_caught(self):
-        self.repo.write("scripts/run.sh", "export SR6_CORE_PDF=" + "/home/" + "someone/book.pdf\n")
+        self.repo.write("scripts/run.sh", "export FIXTURE_SOURCE_PDF=" + "/home/" + "someone/book.pdf\n")
         self.assertCaught(repo_checks.check_source_boundary(self.repo.root), "leaks a local")
 
     def test_macos_home_path_is_also_caught(self):
-        self.repo.write("scripts/run.sh", "export SR6_CORE_PDF=" + "/Users/" + "someone/book.pdf\n")
+        self.repo.write("scripts/run.sh", "export FIXTURE_SOURCE_PDF=" + "/Users/" + "someone/book.pdf\n")
         self.assertCaught(repo_checks.check_source_boundary(self.repo.root), "leaks a local")
 
     def test_a_generic_absolute_path_is_fine(self):
@@ -311,7 +154,7 @@ class SourceBoundaryTests(CheckTestCase):
     def test_manifest_without_valid_hash_is_caught(self):
         self.repo.write(
             ".github/source-manifest.json",
-            '{"sources": [{"sourceId": "sr6-core", "sha256": "TODO"}]}\n',
+            '{"sources": [{"sourceId": "fixture-source", "sha256": "TODO"}]}\n',
         )
         self.assertCaught(repo_checks.check_source_boundary(self.repo.root), "no valid sha256")
 
@@ -323,25 +166,25 @@ class SourceBoundaryTests(CheckTestCase):
     # prose produced no findings at all.
 
     def test_packet_committed_as_txt_is_caught(self):
-        marker = "DECKARD SOURCE" + " PACKET"
+        marker = "AUTHORITATIVE SOURCE" + " PACKET"
         self.repo.write("reference/chapter4.txt", f"{marker}\nrulebook prose here\n")
         self.assertCaught(
             repo_checks.check_source_boundary(self.repo.root), "extracted source packet"
         )
 
     def test_local_path_committed_as_txt_is_caught(self):
-        self.repo.write("reference/config.txt", '{"path": "' + "/home/" + 'x/sr6.pdf"}\n')
+        self.repo.write("reference/config.txt", '{"path": "' + "/home/" + 'x/source.pdf"}\n')
         self.assertCaught(repo_checks.check_source_boundary(self.repo.root), "leaks a local")
 
     def test_extensionless_file_is_inspected(self):
-        marker = "DECKARD SOURCE" + " PACKET"
+        marker = "AUTHORITATIVE SOURCE" + " PACKET"
         self.repo.write("notes", f"{marker}\n")
         self.assertCaught(
             repo_checks.check_source_boundary(self.repo.root), "extracted source packet"
         )
 
     def test_unusual_extensions_are_inspected(self):
-        marker = "DECKARD SOURCE" + " PACKET"
+        marker = "AUTHORITATIVE SOURCE" + " PACKET"
         for name in ("a.xml", "b.csv", "c.html", "d.rst", "e.sql", "f.resx", "g.log"):
             with self.subTest(name=name):
                 repo = FixtureRepo()
@@ -360,11 +203,11 @@ class SourceBoundaryTests(CheckTestCase):
 
     def test_source_handling_doc_is_subject_to_the_local_path_check(self):
         """It was blanket-exempt, and it is the doc most likely to grow a real path."""
-        self.repo.write("docs/source-handling.md", "export SR6_CORE_PDF=" + "/home/" + "x/b.pdf\n")
+        self.repo.write("docs/source-handling.md", "export FIXTURE_SOURCE_PDF=" + "/home/" + "x/b.pdf\n")
         self.assertCaught(repo_checks.check_source_boundary(self.repo.root), "leaks a local")
 
     def test_source_slice_tool_is_still_allowed_to_emit_the_marker(self):
-        marker = "DECKARD SOURCE" + " PACKET"
+        marker = "AUTHORITATIVE SOURCE" + " PACKET"
         self.repo.write("tools/source-slice.py", f'HEADER = "{marker}"\n')
         self.assertEqual(repo_checks.check_source_boundary(self.repo.root), [])
 
@@ -373,11 +216,31 @@ class SourceBoundaryTests(CheckTestCase):
         self.repo.write("tools/source-slice.py", 'DEFAULT = "' + "/home/" + 'x/b.pdf"\n')
         self.assertCaught(repo_checks.check_source_boundary(self.repo.root), "leaks a local")
 
+    def test_rename_map_may_store_literal_transformation_fixtures(self):
+        marker = "AUTHORITATIVE SOURCE" + " PACKET"
+        content = (
+            '{"fixture": "' + marker
+            + '", "path": "/home/example/source.pdf"}\n'
+        )
+        self.repo.write("bootstrap/config/rename-map.json", content)
+        self.assertEqual(repo_checks.check_source_boundary(self.repo.root), [])
+
+    def test_rename_map_exemption_is_narrow(self):
+        marker = "AUTHORITATIVE SOURCE" + " PACKET"
+        content = (
+            '{"fixture": "' + marker
+            + '", "path": "/home/example/source.pdf"}\n'
+        )
+        self.repo.write("bootstrap/config/other.json", content)
+        failures = repo_checks.check_source_boundary(self.repo.root)
+        self.assertCaught(failures, "extracted source packet")
+        self.assertCaught(failures, "leaks a local")
+
     def test_manifest_carrying_a_local_path_is_caught(self):
         self.repo.write(
             ".github/source-manifest.json",
-            '{"sources": [{"sourceId": "sr6-core", "sha256": "' + "a" * 64
-            + '", "path": "/home/x/b.pdf", "envVar": "SR6_CORE_PDF"}]}\n',
+            '{"sources": [{"sourceId": "fixture-source", "sha256": "' + "a" * 64
+            + '", "path": "/home/x/b.pdf", "envVar": "FIXTURE_SOURCE_PDF"}]}\n',
         )
         failures = repo_checks.check_source_boundary(self.repo.root)
         self.assertCaught(failures, "never in git")
@@ -389,7 +252,7 @@ class SingleQueueTests(CheckTestCase):
         self.assertEqual(repo_checks.check_single_queue(self.repo.root), [])
 
     def test_checklist_in_a_governing_doc_is_caught(self):
-        self.repo.write("CLAUDE.md", "# Deckard\n\n- [ ] implement dice pools\n")
+        self.repo.write("CLAUDE.md", "# Framework\n\n- [ ] implement resolution rules\n")
         self.assertCaught(repo_checks.check_single_queue(self.repo.root), "outside GitHub Issues")
 
     def test_completed_checklist_is_also_caught(self):
@@ -397,7 +260,7 @@ class SingleQueueTests(CheckTestCase):
         self.assertCaught(repo_checks.check_single_queue(self.repo.root), "outside GitHub Issues")
 
     def test_bullet_lists_are_fine(self):
-        self.repo.write("README.md", "- Deckard is a rules engine\n- It is deterministic\n")
+        self.repo.write("README.md", "- Framework is a rules engine\n- It is deterministic\n")
         self.assertEqual(repo_checks.check_single_queue(self.repo.root), [])
 
 
@@ -496,12 +359,6 @@ class InvariantDriftTests(CheckTestCase):
     engine code -- was missing 5 of the 11 banned APIs.
     """
 
-    MANIFEST = (
-        '{"sources": [{"sourceId": "sr6-core", "sha256": "' + "a" * 64 + '",'
-        ' "pdfPageCount": 322, "pageNumbering": {"printedPageEqualsPdfPageMinus": 1},'
-        ' "envVar": "SR6_CORE_PDF"}]}\n'
-    )
-
     def _full_ban_list(self) -> str:
         return "\n".join(f"| `{d}` | why |" for d, _p, _w in repo_checks.BANNED_IN_ENGINE)
 
@@ -534,28 +391,6 @@ class InvariantDriftTests(CheckTestCase):
         for name in omitted:
             self.assertIn(name, " ".join(failures))
 
-    def test_correct_page_offset_passes(self):
-        self.repo.write("docs/architecture.md", self._full_ban_list())
-        self.repo.write(".claude/agents/engine-dev.md", self._full_ban_list())
-        self.repo.write(".github/source-manifest.json", self.MANIFEST)
-        self.repo.write("docs/source-handling.md", "printed page = PDF page - 1\n")
-        self.assertEqual(repo_checks.check_invariant_drift(self.repo.root), [])
-
-    def test_drifted_page_offset_is_caught(self):
-        self.repo.write("docs/architecture.md", self._full_ban_list())
-        self.repo.write(".claude/agents/engine-dev.md", self._full_ban_list())
-        self.repo.write(".github/source-manifest.json", self.MANIFEST)
-        self.repo.write("docs/source-handling.md", "printed page = PDF page - 2\n")
-        self.assertCaught(
-            repo_checks.check_invariant_drift(self.repo.root), "manifest says 1"
-        )
-
-    def test_drifted_page_count_is_caught(self):
-        self.repo.write("docs/architecture.md", self._full_ban_list())
-        self.repo.write(".claude/agents/engine-dev.md", self._full_ban_list())
-        self.repo.write(".github/source-manifest.json", self.MANIFEST)
-        self.repo.write("docs/source-handling.md", "The book has 999 PDF pages.\n")
-        self.assertCaught(repo_checks.check_invariant_drift(self.repo.root), "manifest says 322")
 
 
 class RealRepositoryTests(unittest.TestCase):

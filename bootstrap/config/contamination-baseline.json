@@ -26,36 +26,6 @@
       "path": "scripts/validate.sh",
       "pattern": "source-prefix-exact",
       "count": 1
-    },
-    {
-      "path": "tools/repo-checks.py",
-      "pattern": "source-prefix-exact",
-      "count": 25
-    },
-    {
-      "path": "tools/repo-checks.py",
-      "pattern": "source-prefix-lower",
-      "count": 1
-    },
-    {
-      "path": "tools/repo-checks.py",
-      "pattern": "source-prefix-upper",
-      "count": 1
-    },
-    {
-      "path": "tools/tests/test_repo_checks.py",
-      "pattern": "source-prefix-exact",
-      "count": 55
-    },
-    {
-      "path": "tools/tests/test_repo_checks.py",
-      "pattern": "source-prefix-lower",
-      "count": 2
-    },
-    {
-      "path": "tools/tests/test_repo_checks.py",
-      "pattern": "source-prefix-upper",
-      "count": 5
     }
   ]
 }
