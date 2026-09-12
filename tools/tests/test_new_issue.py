@@ -32,7 +32,7 @@ WITH_LOCATOR = """## Purpose
 Implement glitch detection.
 
 ## Source
-SR6 Core / Glitches / printed p. 44 / PDF p. 45
+fixture-core / Glitches / printed p. 44 / PDF p. 45
 
 ## Exact scope
 Determine glitches and critical glitches.

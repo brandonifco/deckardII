@@ -5,13 +5,13 @@ look for it next to itself -- the checkout it happened to be running from -- so 
 reported "not configured" from a worktree even though the primary checkout had it
 configured moments earlier, while `./scripts/doctor.sh` in the primary checkout agreed
 it was fine. This is the same defect class, and now reuses the same fix
-(scripts/lib/dotnet-env.sh's deckard_primary_checkout_root), as #33's `.dotnet/`
+(scripts/lib/dotnet-env.sh's framework_primary_checkout_root), as #33's `.dotnet/`
 resolution -- see test_dotnet_env.py's WorktreeFallbackTests for that half.
 
 These build a real, independent primary checkout + linked worktree (not the one this
 suite itself runs in), with real copies of doctor.sh, dotnet-env.sh and
 source-slice.py, so the whole "Authoritative source" section is exercised end to end
-rather than any one function in isolation. `SR6_CORE_PDF` is deliberately unset in every
+rather than any one function in isolation. `FIXTURE_SOURCE_PDF` is deliberately unset in every
 test: this environment has it set, and a consistent report for that reason would prove
 nothing about `source.local.json` specifically.
 """
@@ -34,7 +34,7 @@ SOURCE_SLICE = ROOT / "tools" / "source-slice.py"
 class AuthoritativeSourceWorktreeTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
-        cls.tmp = Path(tempfile.mkdtemp(prefix="deckard-doctor-"))
+        cls.tmp = Path(tempfile.mkdtemp(prefix="framework-doctor-"))
         cls.primary = cls.tmp / "primary"
         (cls.primary / "scripts" / "lib").mkdir(parents=True)
         (cls.primary / "tools").mkdir(parents=True)
@@ -50,14 +50,14 @@ class AuthoritativeSourceWorktreeTests(unittest.TestCase):
                     "schemaVersion": 1,
                     "sources": [
                         {
-                            "sourceId": "sr6-core",
+                            "sourceId": "fixture-core",
                             "authority": 1,
                             "title": "Fixture Book",
                             "edition": "Fixture Edition",
                             "sha256": "0" * 64,
                             "pdfPageCount": 5,
                             "pageNumbering": {"printedPageEqualsPdfPageMinus": 1},
-                            "envVar": "SR6_CORE_PDF",
+                            "envVar": "FIXTURE_SOURCE_PDF",
                         }
                     ],
                 }
@@ -88,7 +88,7 @@ class AuthoritativeSourceWorktreeTests(unittest.TestCase):
 
     def _authoritative_source_section(self, checkout: Path) -> str:
         env = dict(os.environ)
-        env.pop("SR6_CORE_PDF", None)
+        env.pop("FIXTURE_SOURCE_PDF", None)
         result = subprocess.run(
             ["bash", str(checkout / "scripts" / "doctor.sh")],
             cwd=checkout, capture_output=True, text=True, env=env, check=False,
@@ -103,7 +103,7 @@ class AuthoritativeSourceWorktreeTests(unittest.TestCase):
 
     def _write_local_config(self, pdf_path: str = "/tmp/does-not-matter.pdf") -> Path:
         local_config = self.primary / "source.local.json"
-        local_config.write_text(json.dumps({"sr6-core": pdf_path}), encoding="utf-8")
+        local_config.write_text(json.dumps({"fixture-core": pdf_path}), encoding="utf-8")
         self.addCleanup(local_config.unlink, missing_ok=True)
         return local_config
 
@@ -137,6 +137,24 @@ class AuthoritativeSourceWorktreeTests(unittest.TestCase):
         """The create-it hint must point at a real, reachable path, not "next to me"."""
         worktree_report = self._authoritative_source_section(self.worktree)
         self.assertIn(str(self.primary / "source.local.json"), worktree_report)
+
+    def test_missing_manifest_is_a_valid_unconfigured_framework_state(self):
+        """A bare framework has no ruleset source manifest yet; doctor must accept that."""
+        paths = [
+            self.primary / ".github" / "source-manifest.json",
+            self.worktree / ".github" / "source-manifest.json",
+        ]
+        contents = [path.read_text(encoding="utf-8") for path in paths]
+        try:
+            for path in paths:
+                path.unlink()
+            for checkout in (self.primary, self.worktree):
+                report = self._authoritative_source_section(checkout)
+                self.assertIn("none declared", report)
+                self.assertNotIn("FAIL", report)
+        finally:
+            for path, content in zip(paths, contents):
+                path.write_text(content, encoding="utf-8")
 
 
 if __name__ == "__main__":

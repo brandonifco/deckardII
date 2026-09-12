@@ -96,7 +96,7 @@ if command -v pdftotext >/dev/null 2>&1; then
   else
     # Not `bad`: this never blocks a build or a test, only whether two packets
     # extracted on different machines are provably identical. This repository does not vendor
-    # Poppler, so this cannot be forced to match -- see docs/source-handling.md.
+    # Poppler, so this cannot be forced to match across every developer machine.
     warn "pdftotext" "$poppler_actual (CI pins $poppler_pinned in .github/poppler-version.json)"
     hint "Every packet still records its own extractor/extractorVersion/bodySha256, so a"
     hint "real divergence stays visible and citable rather than silently assumed away."
@@ -109,51 +109,98 @@ fi
 # ------------------------------------------------------------- authoritative source
 section "Authoritative source"
 
-read -r SRC_ID SRC_ENV SRC_EDITION SRC_PAGES <<<"$(python3 - <<'PY' 2>/dev/null || echo "? ? ? ?"
-import json
-e = json.load(open(".github/source-manifest.json"))["sources"][0]
-print(e["sourceId"], e["envVar"], e["edition"].replace(" ", "_"), e["pdfPageCount"])
-PY
-)"
-ok "manifest" "$SRC_ID -- ${SRC_EDITION//_/ } (${SRC_PAGES}p)"
-
-# source.local.json is looked up in the primary checkout (PRIMARY_ROOT above), the same
-# place tools/source-slice.py resolves it from, so this reports the same source state
-# whether run from a worktree or from the primary checkout itself. Say so plainly when
-# the two differ, so "not configured" from a worktree does not read as "look here".
+MANIFEST_PATH="$REPO_ROOT/.github/source-manifest.json"
 LOCAL_CONFIG_PATH="$PRIMARY_ROOT/source.local.json"
-if [[ "$PRIMARY_ROOT" != "$REPO_ROOT" ]]; then
-  hint "(source.local.json is read from the primary checkout: $PRIMARY_ROOT)"
-fi
 
-if [[ -n "${!SRC_ENV:-}" ]]; then
-  CONFIGURED="${!SRC_ENV}"; ORIGIN="\$$SRC_ENV"
-elif [[ -f "$LOCAL_CONFIG_PATH" ]]; then
-  CONFIGURED="$(python3 -c "import json;print(json.load(open('$LOCAL_CONFIG_PATH')).get('$SRC_ID',''))" 2>/dev/null)"
-  ORIGIN="source.local.json"
+if [[ ! -f "$MANIFEST_PATH" ]]; then
+  ok "manifest" "none declared (source-backed rules work not configured)"
 else
-  CONFIGURED=""; ORIGIN=""
-fi
+  MANIFEST_STATUS=0
+  MANIFEST_LINES="$(python3 - "$MANIFEST_PATH" 2>&1 <<'PYDOC'
+import json
+import sys
 
-if [[ -z "$CONFIGURED" ]]; then
-  warn "$SRC_ENV" "not configured"
-  hint "Rules work needs it; everything else (build, tests, CI) does not."
-  hint "export $SRC_ENV=/absolute/path/to/your/own/copy.pdf"
-  hint "or create source.local.json in the primary checkout (gitignored):"
-  hint "  { \"$SRC_ID\": \"/absolute/path.pdf\" } -> $LOCAL_CONFIG_PATH"
-elif [[ ! -f "$CONFIGURED" ]]; then
-  bad "$ORIGIN" "points at a missing file"
-  hint "configured value does not exist on disk"
-else
-  # Report the filename only. The full local path is deliberately not printed:
-  # doctor output gets pasted into Issues and PRs.
-  ok "$ORIGIN" "-> $(basename "$CONFIGURED")"
-  if out="$(tools/source-slice.py --verify-only 2>&1)"; then
-    ok "sha256" "matches the pinned baseline"
+path = sys.argv[1]
+try:
+    manifest = json.load(open(path, encoding="utf-8"))
+except (OSError, json.JSONDecodeError) as exc:
+    print(f"invalid source manifest: {exc}", file=sys.stderr)
+    raise SystemExit(1)
+
+sources = manifest.get("sources", [])
+if not isinstance(sources, list):
+    print("source manifest field 'sources' must be an array", file=sys.stderr)
+    raise SystemExit(1)
+
+for entry in sources:
+    required = ("sourceId", "envVar", "edition", "pdfPageCount")
+    missing = [key for key in required if key not in entry]
+    if missing:
+        print(
+            f"source manifest entry missing required field(s): {', '.join(missing)}",
+            file=sys.stderr,
+        )
+        raise SystemExit(1)
+
+    values = (
+        str(entry["sourceId"]),
+        str(entry["envVar"]),
+        str(entry["edition"]),
+        str(entry["pdfPageCount"]),
+    )
+    print("\t".join(value.replace("\t", " ").replace("\n", " ") for value in values))
+PYDOC
+)" || MANIFEST_STATUS=$?
+
+  if [[ "$MANIFEST_STATUS" -ne 0 ]]; then
+    bad "manifest" "invalid"
+    printf '%s\n' "$MANIFEST_LINES" | sed 's/^/        /' | head -6
+  elif [[ -z "$MANIFEST_LINES" ]]; then
+    ok "manifest" "0 authoritative sources declared"
   else
-    bad "sha256" "does NOT match the pinned baseline"
-    printf '%s\n' "$out" | sed 's/^/        /' | head -6
-    hint "This is the wrong printing or a corrupt file. Do not edit the manifest."
+    SOURCE_COUNT="$(printf '%s\n' "$MANIFEST_LINES" | wc -l | tr -d ' ')"
+    ok "manifest" "$SOURCE_COUNT authoritative source(s) declared"
+
+    # source.local.json lives in the primary checkout so one local configuration is
+    # visible from every linked worktree.
+    if [[ "$PRIMARY_ROOT" != "$REPO_ROOT" ]]; then
+      hint "(source.local.json is read from the primary checkout: $PRIMARY_ROOT)"
+    fi
+
+    while IFS=$'\t' read -r SRC_ID SRC_ENV SRC_EDITION SRC_PAGES; do
+      [[ -n "$SRC_ID" ]] || continue
+      ok "source" "$SRC_ID -- $SRC_EDITION (${SRC_PAGES}p)"
+
+      if [[ -n "${!SRC_ENV:-}" ]]; then
+        CONFIGURED="${!SRC_ENV}"; ORIGIN="\$$SRC_ENV"
+      elif [[ -f "$LOCAL_CONFIG_PATH" ]]; then
+        CONFIGURED="$(python3 -c "import json;print(json.load(open('$LOCAL_CONFIG_PATH')).get('$SRC_ID',''))" 2>/dev/null)"
+        ORIGIN="source.local.json"
+      else
+        CONFIGURED=""; ORIGIN=""
+      fi
+
+      if [[ -z "$CONFIGURED" ]]; then
+        warn "$SRC_ID" "$SRC_ENV not configured"
+        hint "Source-backed rules work for this source needs a local copy; build/tests/CI do not."
+        hint "export $SRC_ENV=/absolute/path/to/your/own/copy.pdf"
+        hint "or add to source.local.json in the primary checkout (gitignored):"
+        hint "  { \"$SRC_ID\": \"/absolute/path.pdf\" } -> $LOCAL_CONFIG_PATH"
+      elif [[ ! -f "$CONFIGURED" ]]; then
+        bad "$SRC_ID" "$ORIGIN points at a missing file"
+        hint "configured value does not exist on disk"
+      else
+        # Report only the basename; doctor output is routinely pasted into Issues and PRs.
+        ok "$SRC_ID" "$ORIGIN -> $(basename "$CONFIGURED")"
+        if out="$(tools/source-slice.py --source-id "$SRC_ID" --verify-only 2>&1)"; then
+          ok "sha256" "$SRC_ID matches the pinned baseline"
+        else
+          bad "sha256" "$SRC_ID does NOT match the pinned baseline"
+          printf '%s\n' "$out" | sed 's/^/        /' | head -6
+          hint "The configured file is not the pinned source. Do not edit the manifest to make it pass."
+        fi
+      fi
+    done <<< "$MANIFEST_LINES"
   fi
 fi
 
@@ -204,7 +251,7 @@ else
 
   if [[ -n "$(git ls-files '*.pdf' 2>/dev/null)" ]]; then
     bad "source boundary" "a PDF is tracked in git"
-    hint "The rulebook must never be committed. See docs/source-handling.md."
+    hint "Authoritative source PDFs must never be committed."
   else
     ok "source boundary" "no rulebook tracked"
   fi

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""source-slice -- bounded, hash-verified extraction from the authoritative SR6 source.
+"""source-slice -- bounded, hash-verified extraction from an authoritative source.
 
-Every agent that needs rulebook text gets it through this tool, so that every agent
+Every agent that needs authoritative source text gets it through this tool, so that every agent
 sees the same bytes produced the same way, and so that no agent ever re-transcribes
 the book from memory. It slices a page range and emits it with a self-describing
 header identifying exactly what was extracted and from what.
@@ -10,7 +10,7 @@ header identifying exactly what was extracted and from what.
     tools/source-slice.py --printed-pages 44-47 --layout
     tools/source-slice.py --pages 45 --expect "Success Test" --output /tmp/packet.txt
 
-Design constraints (docs/source-handling.md):
+Design constraints:
 
   * There is NO --file argument, and there never will be. The source is resolved from
     the committed manifest, so an agent cannot substitute a different printing, a
@@ -48,7 +48,7 @@ def _primary_checkout_root() -> Path:
 
     `git rev-parse --git-common-dir` is what dispatch-agent.sh already uses to tell a
     worktree from the primary checkout (its own assert_primary_checkout), and what
-    scripts/lib/dotnet-env.sh's deckard_primary_checkout_root uses for the identical
+    scripts/lib/dotnet-env.sh's framework_primary_checkout_root uses for the identical
     "one shared resource, every worktree must find it" problem with its own .dotnet/
     lookup -- this mirrors that shell function. The common-dir path points at the
     primary checkout's `.git` directory; its parent is the checkout root, since `.git`
@@ -87,8 +87,8 @@ LOCAL_CONFIG = PRIMARY_CHECKOUT_ROOT / "source.local.json"
 # Test-only manifest override. Requires an explicit second opt-in, and any packet
 # produced under it is stamped NON-AUTHORITATIVE in its own header so a substituted
 # baseline can never masquerade as the real one in a review packet.
-ENV_MANIFEST_OVERRIDE = "DECKARD_SOURCE_MANIFEST"
-ENV_MANIFEST_OVERRIDE_OPT_IN = "DECKARD_ALLOW_TEST_MANIFEST"
+ENV_MANIFEST_OVERRIDE = "FRAMEWORK_SOURCE_MANIFEST"
+ENV_MANIFEST_OVERRIDE_OPT_IN = "FRAMEWORK_ALLOW_TEST_MANIFEST"
 
 
 class SourceSliceError(RuntimeError):
@@ -112,20 +112,39 @@ def _manifest_path() -> tuple[Path, bool]:
     return Path(override), True
 
 
-def load_source(source_id: str) -> tuple[dict, bool]:
+def load_source(source_id: str | None) -> tuple[dict, bool]:
     path, is_override = _manifest_path()
     if not path.is_file():
-        raise SourceSliceError(f"Source manifest not found: {path}")
+        raise SourceSliceError(
+            f"Source manifest not found: {path}\n"
+            "This framework has no authoritative source configured yet. "
+            "A consuming ruleset must declare one before source-backed rules work can begin."
+        )
     try:
         manifest = json.loads(path.read_text(encoding="utf-8"))
     except json.JSONDecodeError as exc:
         raise SourceSliceError(f"Source manifest is not valid JSON: {path}: {exc}") from exc
 
-    for entry in manifest.get("sources", []):
+    sources = manifest.get("sources", [])
+    if not isinstance(sources, list):
+        raise SourceSliceError("Source manifest field 'sources' must be an array.")
+
+    if source_id is None:
+        if len(sources) == 1:
+            return sources[0], is_override
+        if not sources:
+            raise SourceSliceError("Source manifest declares no authoritative sources.")
+        known = ", ".join(e.get("sourceId", "?") for e in sources)
+        raise SourceSliceError(
+            "Source manifest declares multiple sources; --source-id is required.\n"
+            f"  Declared sources: {known}"
+        )
+
+    for entry in sources:
         if entry.get("sourceId") == source_id:
             return entry, is_override
 
-    known = ", ".join(e.get("sourceId", "?") for e in manifest.get("sources", [])) or "(none)"
+    known = ", ".join(e.get("sourceId", "?") for e in sources) or "(none)"
     raise SourceSliceError(f"Unknown sourceId '{source_id}'. Manifest declares: {known}")
 
 
@@ -136,7 +155,7 @@ def resolve_source_path(source: dict, is_test_manifest: bool = False) -> Path:
     """Locate the local copy of the authoritative source.
 
     Resolution order, both deliberately outside version control:
-      1. the environment variable named by the manifest (e.g. SR6_CORE_PDF)
+      1. the environment variable named by the selected manifest entry
       2. source.local.json in the PRIMARY CHECKOUT (see PRIMARY_CHECKOUT_ROOT above),
          mapping sourceId -> absolute path -- not the checkout this script happens to be
          running from, so it is visible from every worktree too (#57).
@@ -164,7 +183,7 @@ def resolve_source_path(source: dict, is_test_manifest: bool = False) -> Path:
             f"    {source['title']} -- {source['edition']}\n"
             f"  or create {LOCAL_CONFIG} (gitignored) containing:\n"
             f'    {{ "{source["sourceId"]}": "/absolute/path/to/the/file.pdf" }}\n'
-            "  See docs/source-handling.md. The file itself is never committed."
+            "  The authoritative source file itself is never committed."
         )
 
     path = Path(raw).expanduser()
@@ -255,7 +274,7 @@ def check_packet_size(first: int, last: int) -> None:
     if count > MAX_PAGES:
         raise SourceSliceError(
             f"Refusing to extract {count} pages in one packet (limit {MAX_PAGES}).\n"
-            "Source packets are bounded by design -- see docs/source-handling.md.\n"
+            "Source packets are bounded by design.\n"
             "Narrow the Issue. There is no flag to extract more than this in one packet."
         )
 
@@ -267,8 +286,8 @@ def check_packet_size(first: int, last: int) -> None:
 # same granularity `pdftotext -v` reports, and exactly what ends up in every packet's
 # `extractorVersion` field below. This tool itself does not read or enforce that pin: it
 # reports whatever is actually installed, honestly, rather than silently blocking a
-# developer whose OS cannot match CI's exactly. See docs/source-handling.md for what the
-# pin can and cannot guarantee -- Deckard does not vendor Poppler (a deliberate
+# developer whose OS cannot match CI's exactly. The packet records what the
+# pin can and cannot guarantee -- this framework does not vendor Poppler (a deliberate
 # non-goal), so it forces drift to be *visible and deliberate*, not impossible.
 
 
@@ -309,8 +328,8 @@ def redact_argv(argv: list[str], path: Path) -> list[str]:
     """The argv as it goes into a packet header: every flag and page number, but never
     the local filesystem path.
 
-    docs/source-handling.md already keeps scripts/doctor.sh from ever printing Brandon's
-    full local path, because doctor output gets pasted into Issues -- the same reasoning
+    scripts/doctor.sh already avoids printing a developer's full local source path,
+    because doctor output gets pasted into Issues -- the same reasoning
     applies here, since packets get read and occasionally quoted from even though they
     are never committed. Only the basename survives; the flags this field exists to
     disclose (`-layout`, `-f`, `-l`) are untouched.
@@ -351,7 +370,7 @@ def build_header(
 
     lines = [
         "=" * 78,
-        "DECKARD SOURCE PACKET -- ephemeral, never commit this file",
+        "AUTHORITATIVE SOURCE PACKET -- ephemeral, never commit this file",
         "=" * 78,
     ]
     if is_override:
@@ -372,7 +391,7 @@ def build_header(
         field("argv", " ".join(argv_display)),
         field("bodySha256", body_sha256),
         "",
-        "Cite rules as:  SR6 Core / <section> / printed p. X / PDF p. Y",
+        "Cite source as: <source> / <section> / printed p. X / PDF p. Y",
         "This excerpt is copyrighted material reproduced locally for implementation",
         "reference only. Do not commit it, paste it into an Issue, or redistribute it.",
         "=" * 78,
@@ -384,7 +403,7 @@ def build_header(
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="source-slice.py",
-        description="Bounded, hash-verified extraction from the authoritative SR6 source.",
+        description="Bounded, hash-verified extraction from an authoritative source.",
     )
     pages = parser.add_mutually_exclusive_group()
     pages.add_argument("--pages", help="PDF page or range, e.g. 45 or 45-48")
@@ -392,7 +411,10 @@ def main(argv: list[str] | None = None) -> int:
         "--printed-pages",
         help="Page or range as printed in the book; converted using the manifest offset",
     )
-    parser.add_argument("--source-id", default="sr6-core", help="default: sr6-core")
+    parser.add_argument(
+        "--source-id",
+        help="sourceId from the manifest; required when the manifest declares multiple sources",
+    )
     parser.add_argument(
         "--layout", action="store_true", help="preserve layout (use for printed tables)"
     )

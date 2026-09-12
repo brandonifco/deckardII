@@ -30,7 +30,7 @@
       },
       {
         "path": "bootstrap/config/contamination-baseline.json",
-        "sha256": "e5f0be7593ab1bbcd043801b4c0c4a3a91008b53dadbb2bfd781fcd1459171bc"
+        "sha256": "4b6bfe0ac73c0693f538449ad59fea67bed7d030dd64cae112bd1c6bdc7e72f0"
       },
       {
         "path": "bootstrap/config/contamination-policy.json",
@@ -46,7 +46,7 @@
       },
       {
         "path": "bootstrap/config/rename-map.json",
-        "sha256": "f31db79fd2f8ad1892717e65c97ec645f5130df55f7a3b2ab48b076a69802c57"
+        "sha256": "775d66dc0a03261bca2636f932884a3870ad287cce9eed702015707a2666d589"
       },
       {
         "path": "bootstrap/config/structure-manifest.txt",

@@ -41,7 +41,7 @@ TEMPLATE="$(cat <<'TPL'
 
 ## Source
 
-<!-- RULES WORK: SR6 Core / <section> / printed p. X / PDF p. Y
+<!-- RULES WORK: <sourceId> / <section> / printed p. X / PDF p. Y
      Identify the location precisely enough to implement from. Cite it; do not paste it.
      NON-RULES WORK: N/A -->
 
@@ -61,7 +61,7 @@ N/A
 
 ## Required tests/evidence
 
-<!-- What must be demonstrated, and how. Where the book prints a finite table, the whole
+<!-- What must be demonstrated, and how. Where the authoritative source prints a finite table, the whole
      table is verified, not a sample. -->
 
 ## Dependencies
@@ -114,7 +114,7 @@ if [[ "$IS_MECHANICS" -eq 1 ]]; then
     die "this Issue is labelled area:rules or area:data but its ## Source section names
        no page. A mechanics Issue must cite its location, e.g.
 
-         SR6 Core / Tests / printed pp. 35-36 / PDF pp. 36-37
+         core-rules / Tests / printed pp. 35-36 / PDF pp. 36-37
 
        Locate it first -- tools/source-slice.py can confirm a range with --expect.
        Nothing was filed."

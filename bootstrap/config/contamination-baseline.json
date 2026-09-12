@@ -43,11 +43,6 @@
       "count": 1
     },
     {
-      "path": "tools/new-issue.sh",
-      "pattern": "domain-sr6",
-      "count": 2
-    },
-    {
       "path": "tools/pr-policy.py",
       "pattern": "domain-sr6",
       "count": 1
@@ -91,31 +86,6 @@
       "path": "tools/rules-conformance-gate.py",
       "pattern": "source-prefix-lower",
       "count": 4
-    },
-    {
-      "path": "tools/source-slice.py",
-      "pattern": "domain-sr6",
-      "count": 3
-    },
-    {
-      "path": "tools/source-slice.py",
-      "pattern": "source-prefix-exact",
-      "count": 1
-    },
-    {
-      "path": "tools/source-slice.py",
-      "pattern": "source-prefix-upper",
-      "count": 1
-    },
-    {
-      "path": "tools/tests/test_doctor_sh.py",
-      "pattern": "source-prefix-lower",
-      "count": 1
-    },
-    {
-      "path": "tools/tests/test_new_issue.py",
-      "pattern": "domain-sr6",
-      "count": 1
     },
     {
       "path": "tools/tests/test_pr_policy.py",
@@ -181,11 +151,6 @@
       "path": "tools/tests/test_rules_conformance_gate.py",
       "pattern": "source-prefix-lower",
       "count": 4
-    },
-    {
-      "path": "tools/tests/test_source_slice.py",
-      "pattern": "source-prefix-lower",
-      "count": 2
     }
   ]
 }

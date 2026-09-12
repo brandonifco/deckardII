@@ -170,6 +170,211 @@
       "path": ".github/workflows/build-and-test.yml",
       "search": "# {{SOURCE_PREFIX}} does not vendor Poppler (docs/source-handling.md), so apt is not asked",
       "replace": "# This repository does not vendor Poppler (docs/source-handling.md), so apt is not asked"
+    },
+    {
+      "path": "tools/source-slice.py",
+      "search": "\"\"\"source-slice -- bounded, hash-verified extraction from the authoritative SR6 source.",
+      "replace": "\"\"\"source-slice -- bounded, hash-verified extraction from an authoritative source."
+    },
+    {
+      "path": "tools/source-slice.py",
+      "search": "Every agent that needs rulebook text gets it through this tool, so that every agent",
+      "replace": "Every agent that needs authoritative source text gets it through this tool, so that every agent"
+    },
+    {
+      "path": "tools/source-slice.py",
+      "search": "Design constraints (docs/source-handling.md):",
+      "replace": "Design constraints:"
+    },
+    {
+      "path": "tools/source-slice.py",
+      "search": "def load_source(source_id: str) -> tuple[dict, bool]:\n    path, is_override = _manifest_path()\n    if not path.is_file():\n        raise SourceSliceError(f\"Source manifest not found: {path}\")\n    try:\n        manifest = json.loads(path.read_text(encoding=\"utf-8\"))\n    except json.JSONDecodeError as exc:\n        raise SourceSliceError(f\"Source manifest is not valid JSON: {path}: {exc}\") from exc\n\n    for entry in manifest.get(\"sources\", []):\n        if entry.get(\"sourceId\") == source_id:\n            return entry, is_override\n\n    known = \", \".join(e.get(\"sourceId\", \"?\") for e in manifest.get(\"sources\", [])) or \"(none)\"\n    raise SourceSliceError(f\"Unknown sourceId '{source_id}'. Manifest declares: {known}\")\n",
+      "replace": "def load_source(source_id: str | None) -> tuple[dict, bool]:\n    path, is_override = _manifest_path()\n    if not path.is_file():\n        raise SourceSliceError(\n            f\"Source manifest not found: {path}\\n\"\n            \"This framework has no authoritative source configured yet. \"\n            \"A consuming ruleset must declare one before source-backed rules work can begin.\"\n        )\n    try:\n        manifest = json.loads(path.read_text(encoding=\"utf-8\"))\n    except json.JSONDecodeError as exc:\n        raise SourceSliceError(f\"Source manifest is not valid JSON: {path}: {exc}\") from exc\n\n    sources = manifest.get(\"sources\", [])\n    if not isinstance(sources, list):\n        raise SourceSliceError(\"Source manifest field 'sources' must be an array.\")\n\n    if source_id is None:\n        if len(sources) == 1:\n            return sources[0], is_override\n        if not sources:\n            raise SourceSliceError(\"Source manifest declares no authoritative sources.\")\n        known = \", \".join(e.get(\"sourceId\", \"?\") for e in sources)\n        raise SourceSliceError(\n            \"Source manifest declares multiple sources; --source-id is required.\\n\"\n            f\"  Declared sources: {known}\"\n        )\n\n    for entry in sources:\n        if entry.get(\"sourceId\") == source_id:\n            return entry, is_override\n\n    known = \", \".join(e.get(\"sourceId\", \"?\") for e in sources) or \"(none)\"\n    raise SourceSliceError(f\"Unknown sourceId '{source_id}'. Manifest declares: {known}\")\n"
+    },
+    {
+      "path": "tools/source-slice.py",
+      "search": "ENV_MANIFEST_OVERRIDE = \"{{SOURCE_PREFIX_UPPER}}_SOURCE_MANIFEST\"",
+      "replace": "ENV_MANIFEST_OVERRIDE = \"FRAMEWORK_SOURCE_MANIFEST\""
+    },
+    {
+      "path": "tools/source-slice.py",
+      "search": "ENV_MANIFEST_OVERRIDE_OPT_IN = \"{{SOURCE_PREFIX_UPPER}}_ALLOW_TEST_MANIFEST\"",
+      "replace": "ENV_MANIFEST_OVERRIDE_OPT_IN = \"FRAMEWORK_ALLOW_TEST_MANIFEST\""
+    },
+    {
+      "path": "tools/source-slice.py",
+      "search": "scripts/lib/dotnet-env.sh's {{SOURCE_PREFIX_LOWER}}_primary_checkout_root uses for the identical",
+      "replace": "scripts/lib/dotnet-env.sh's framework_primary_checkout_root uses for the identical"
+    },
+    {
+      "path": "tools/source-slice.py",
+      "search": "      1. the environment variable named by the manifest (e.g. SR6_CORE_PDF)",
+      "replace": "      1. the environment variable named by the selected manifest entry"
+    },
+    {
+      "path": "tools/source-slice.py",
+      "search": "  See docs/source-handling.md. The file itself is never committed.",
+      "replace": "  The authoritative source file itself is never committed."
+    },
+    {
+      "path": "tools/source-slice.py",
+      "search": "# pin can and cannot guarantee -- {{SOURCE_PREFIX}} does not vendor Poppler (a deliberate",
+      "replace": "# pin can and cannot guarantee -- this framework does not vendor Poppler (a deliberate"
+    },
+    {
+      "path": "tools/source-slice.py",
+      "search": "# developer whose OS cannot match CI's exactly. See docs/source-handling.md for what the",
+      "replace": "# developer whose OS cannot match CI's exactly. The packet records what the"
+    },
+    {
+      "path": "tools/source-slice.py",
+      "search": "    docs/source-handling.md already keeps scripts/doctor.sh from ever printing Brandon's\n    full local path, because doctor output gets pasted into Issues -- the same reasoning",
+      "replace": "    scripts/doctor.sh already avoids printing a developer's full local source path,\n    because doctor output gets pasted into Issues -- the same reasoning"
+    },
+    {
+      "path": "tools/source-slice.py",
+      "search": "\"{{SOURCE_PREFIX_UPPER}} SOURCE PACKET -- ephemeral, never commit this file\",",
+      "replace": "\"AUTHORITATIVE SOURCE PACKET -- ephemeral, never commit this file\","
+    },
+    {
+      "path": "tools/source-slice.py",
+      "search": "\"Cite rules as:  SR6 Core / <section> / printed p. X / PDF p. Y\",",
+      "replace": "\"Cite source as: <source> / <section> / printed p. X / PDF p. Y\","
+    },
+    {
+      "path": "tools/source-slice.py",
+      "search": "description=\"Bounded, hash-verified extraction from the authoritative SR6 source.\",",
+      "replace": "description=\"Bounded, hash-verified extraction from an authoritative source.\","
+    },
+    {
+      "path": "tools/source-slice.py",
+      "search": "parser.add_argument(\"--source-id\", default=\"sr6-core\", help=\"default: sr6-core\")",
+      "replace": "parser.add_argument(\n        \"--source-id\",\n        help=\"sourceId from the manifest; required when the manifest declares multiple sources\",\n    )"
+    },
+    {
+      "path": "tools/source-slice.py",
+      "search": "\"Source packets are bounded by design -- see docs/source-handling.md.\\n\"",
+      "replace": "\"Source packets are bounded by design.\\n\""
+    },
+    {
+      "path": "tools/tests/test_source_slice.py",
+      "search": "    def test_committed_manifest_has_the_expected_shape(self):\n        \"\"\"Split out from the test above, which was named for stamping and did this.\"\"\"\n        real = json.loads((ROOT / \".github\" / \"source-manifest.json\").read_text(encoding=\"utf-8\"))\n        entry = real[\"sources\"][0]\n        self.assertEqual(entry[\"sourceId\"], \"sr6-core\")\n        self.assertRegex(entry[\"sha256\"], r\"^[0-9a-f]{64}$\")\n        self.assertGreater(entry[\"pdfPageCount\"], 0)\n",
+      "replace": "    @NEEDS_PDFTOTEXT\n    def test_multiple_source_manifest_requires_explicit_source_id(self):\n        data = json.loads(self.manifest.read_text(encoding=\"utf-8\"))\n        second = dict(data[\"sources\"][0])\n        second[\"sourceId\"] = \"fixture-second\"\n        second[\"envVar\"] = \"FIXTURE_SECOND_PDF\"\n        data[\"sources\"].append(second)\n\n        multi = self.tmp / \"multi-manifest.json\"\n        multi.write_text(json.dumps(data), encoding=\"utf-8\")\n\n        ambiguous = self.run_tool(\"--verify-only\", manifest=multi)\n        self.assertNotEqual(ambiguous.returncode, 0)\n        self.assertIn(\"multiple sources\", ambiguous.stderr)\n        self.assertIn(\"--source-id\", ambiguous.stderr)\n\n        selected = self.run_tool(\n            \"--verify-only\", \"--source-id\", \"fixture-core\", manifest=multi\n        )\n        self.assertEqual(selected.returncode, 0, selected.stderr)\n        self.assertIn(\"sha256 verified\", selected.stdout)\n"
+    },
+    {
+      "path": "tools/tests/test_source_slice.py",
+      "search": "{{SOURCE_PREFIX_UPPER}}_SOURCE_MANIFEST",
+      "replace": "FRAMEWORK_SOURCE_MANIFEST"
+    },
+    {
+      "path": "tools/tests/test_source_slice.py",
+      "search": "{{SOURCE_PREFIX_UPPER}}_ALLOW_TEST_MANIFEST",
+      "replace": "FRAMEWORK_ALLOW_TEST_MANIFEST"
+    },
+    {
+      "path": "tools/tests/test_source_slice.py",
+      "search": "SR6_CORE_PDF",
+      "replace": "FIXTURE_SOURCE_PDF"
+    },
+    {
+      "path": "tools/tests/test_source_slice.py",
+      "search": "sr6-core",
+      "replace": "fixture-core"
+    },
+    {
+      "path": "tools/tests/test_source_slice.py",
+      "search": "sr6-supplement",
+      "replace": "fixture-supplement"
+    },
+    {
+      "path": "tools/tests/test_source_slice.py",
+      "search": "{{SOURCE_PREFIX_LOWER}}-slice-worktree-",
+      "replace": "framework-source-worktree-"
+    },
+    {
+      "path": "tools/tests/test_source_slice.py",
+      "search": "{{SOURCE_PREFIX_LOWER}}-slice-",
+      "replace": "framework-source-"
+    },
+    {
+      "path": "tools/tests/test_source_slice.py",
+      "search": "Brandon's full local path",
+      "replace": "a developer's full local path"
+    },
+    {
+      "path": "scripts/doctor.sh",
+      "search": "# ------------------------------------------------------------- authoritative source\nsection \"Authoritative source\"\n\nread -r SRC_ID SRC_ENV SRC_EDITION SRC_PAGES <<<\"$(python3 - <<'PY' 2>/dev/null || echo \"? ? ? ?\"\nimport json\ne = json.load(open(\".github/source-manifest.json\"))[\"sources\"][0]\nprint(e[\"sourceId\"], e[\"envVar\"], e[\"edition\"].replace(\" \", \"_\"), e[\"pdfPageCount\"])\nPY\n)\"\nok \"manifest\" \"$SRC_ID -- ${SRC_EDITION//_/ } (${SRC_PAGES}p)\"\n\n# source.local.json is looked up in the primary checkout (PRIMARY_ROOT above), the same\n# place tools/source-slice.py resolves it from, so this reports the same source state\n# whether run from a worktree or from the primary checkout itself. Say so plainly when\n# the two differ, so \"not configured\" from a worktree does not read as \"look here\".\nLOCAL_CONFIG_PATH=\"$PRIMARY_ROOT/source.local.json\"\nif [[ \"$PRIMARY_ROOT\" != \"$REPO_ROOT\" ]]; then\n  hint \"(source.local.json is read from the primary checkout: $PRIMARY_ROOT)\"\nfi\n\nif [[ -n \"${!SRC_ENV:-}\" ]]; then\n  CONFIGURED=\"${!SRC_ENV}\"; ORIGIN=\"\\$$SRC_ENV\"\nelif [[ -f \"$LOCAL_CONFIG_PATH\" ]]; then\n  CONFIGURED=\"$(python3 -c \"import json;print(json.load(open('$LOCAL_CONFIG_PATH')).get('$SRC_ID',''))\" 2>/dev/null)\"\n  ORIGIN=\"source.local.json\"\nelse\n  CONFIGURED=\"\"; ORIGIN=\"\"\nfi\n\nif [[ -z \"$CONFIGURED\" ]]; then\n  warn \"$SRC_ENV\" \"not configured\"\n  hint \"Rules work needs it; everything else (build, tests, CI) does not.\"\n  hint \"export $SRC_ENV=/absolute/path/to/your/own/copy.pdf\"\n  hint \"or create source.local.json in the primary checkout (gitignored):\"\n  hint \"  { \\\"$SRC_ID\\\": \\\"/absolute/path.pdf\\\" } -> $LOCAL_CONFIG_PATH\"\nelif [[ ! -f \"$CONFIGURED\" ]]; then\n  bad \"$ORIGIN\" \"points at a missing file\"\n  hint \"configured value does not exist on disk\"\nelse\n  # Report the filename only. The full local path is deliberately not printed:\n  # doctor output gets pasted into Issues and PRs.\n  ok \"$ORIGIN\" \"-> $(basename \"$CONFIGURED\")\"\n  if out=\"$(tools/source-slice.py --verify-only 2>&1)\"; then\n    ok \"sha256\" \"matches the pinned baseline\"\n  else\n    bad \"sha256\" \"does NOT match the pinned baseline\"\n    printf '%s\\n' \"$out\" | sed 's/^/        /' | head -6\n    hint \"This is the wrong printing or a corrupt file. Do not edit the manifest.\"\n  fi\nfi\n\n",
+      "replace": "# ------------------------------------------------------------- authoritative source\nsection \"Authoritative source\"\n\nMANIFEST_PATH=\"$REPO_ROOT/.github/source-manifest.json\"\nLOCAL_CONFIG_PATH=\"$PRIMARY_ROOT/source.local.json\"\n\nif [[ ! -f \"$MANIFEST_PATH\" ]]; then\n  ok \"manifest\" \"none declared (source-backed rules work not configured)\"\nelse\n  MANIFEST_STATUS=0\n  MANIFEST_LINES=\"$(python3 - \"$MANIFEST_PATH\" 2>&1 <<'PYDOC'\nimport json\nimport sys\n\npath = sys.argv[1]\ntry:\n    manifest = json.load(open(path, encoding=\"utf-8\"))\nexcept (OSError, json.JSONDecodeError) as exc:\n    print(f\"invalid source manifest: {exc}\", file=sys.stderr)\n    raise SystemExit(1)\n\nsources = manifest.get(\"sources\", [])\nif not isinstance(sources, list):\n    print(\"source manifest field 'sources' must be an array\", file=sys.stderr)\n    raise SystemExit(1)\n\nfor entry in sources:\n    required = (\"sourceId\", \"envVar\", \"edition\", \"pdfPageCount\")\n    missing = [key for key in required if key not in entry]\n    if missing:\n        print(\n            f\"source manifest entry missing required field(s): {', '.join(missing)}\",\n            file=sys.stderr,\n        )\n        raise SystemExit(1)\n\n    values = (\n        str(entry[\"sourceId\"]),\n        str(entry[\"envVar\"]),\n        str(entry[\"edition\"]),\n        str(entry[\"pdfPageCount\"]),\n    )\n    print(\"\\t\".join(value.replace(\"\\t\", \" \").replace(\"\\n\", \" \") for value in values))\nPYDOC\n)\" || MANIFEST_STATUS=$?\n\n  if [[ \"$MANIFEST_STATUS\" -ne 0 ]]; then\n    bad \"manifest\" \"invalid\"\n    printf '%s\\n' \"$MANIFEST_LINES\" | sed 's/^/        /' | head -6\n  elif [[ -z \"$MANIFEST_LINES\" ]]; then\n    ok \"manifest\" \"0 authoritative sources declared\"\n  else\n    SOURCE_COUNT=\"$(printf '%s\\n' \"$MANIFEST_LINES\" | wc -l | tr -d ' ')\"\n    ok \"manifest\" \"$SOURCE_COUNT authoritative source(s) declared\"\n\n    # source.local.json lives in the primary checkout so one local configuration is\n    # visible from every linked worktree.\n    if [[ \"$PRIMARY_ROOT\" != \"$REPO_ROOT\" ]]; then\n      hint \"(source.local.json is read from the primary checkout: $PRIMARY_ROOT)\"\n    fi\n\n    while IFS=$'\\t' read -r SRC_ID SRC_ENV SRC_EDITION SRC_PAGES; do\n      [[ -n \"$SRC_ID\" ]] || continue\n      ok \"source\" \"$SRC_ID -- $SRC_EDITION (${SRC_PAGES}p)\"\n\n      if [[ -n \"${!SRC_ENV:-}\" ]]; then\n        CONFIGURED=\"${!SRC_ENV}\"; ORIGIN=\"\\$$SRC_ENV\"\n      elif [[ -f \"$LOCAL_CONFIG_PATH\" ]]; then\n        CONFIGURED=\"$(python3 -c \"import json;print(json.load(open('$LOCAL_CONFIG_PATH')).get('$SRC_ID',''))\" 2>/dev/null)\"\n        ORIGIN=\"source.local.json\"\n      else\n        CONFIGURED=\"\"; ORIGIN=\"\"\n      fi\n\n      if [[ -z \"$CONFIGURED\" ]]; then\n        warn \"$SRC_ID\" \"$SRC_ENV not configured\"\n        hint \"Source-backed rules work for this source needs a local copy; build/tests/CI do not.\"\n        hint \"export $SRC_ENV=/absolute/path/to/your/own/copy.pdf\"\n        hint \"or add to source.local.json in the primary checkout (gitignored):\"\n        hint \"  { \\\"$SRC_ID\\\": \\\"/absolute/path.pdf\\\" } -> $LOCAL_CONFIG_PATH\"\n      elif [[ ! -f \"$CONFIGURED\" ]]; then\n        bad \"$SRC_ID\" \"$ORIGIN points at a missing file\"\n        hint \"configured value does not exist on disk\"\n      else\n        # Report only the basename; doctor output is routinely pasted into Issues and PRs.\n        ok \"$SRC_ID\" \"$ORIGIN -> $(basename \"$CONFIGURED\")\"\n        if out=\"$(tools/source-slice.py --source-id \"$SRC_ID\" --verify-only 2>&1)\"; then\n          ok \"sha256\" \"$SRC_ID matches the pinned baseline\"\n        else\n          bad \"sha256\" \"$SRC_ID does NOT match the pinned baseline\"\n          printf '%s\\n' \"$out\" | sed 's/^/        /' | head -6\n          hint \"The configured file is not the pinned source. Do not edit the manifest to make it pass.\"\n        fi\n      fi\n    done <<< \"$MANIFEST_LINES\"\n  fi\nfi\n\n"
+    },
+    {
+      "path": "scripts/doctor.sh",
+      "search": "# Poppler, so this cannot be forced to match -- see docs/source-handling.md.",
+      "replace": "# Poppler, so this cannot be forced to match across every developer machine."
+    },
+    {
+      "path": "scripts/doctor.sh",
+      "search": "hint \"The rulebook must never be committed. See docs/source-handling.md.\"",
+      "replace": "hint \"Authoritative source PDFs must never be committed.\""
+    },
+    {
+      "path": "tools/tests/test_doctor_sh.py",
+      "search": "scripts/lib/dotnet-env.sh's {{SOURCE_PREFIX_LOWER}}_primary_checkout_root",
+      "replace": "scripts/lib/dotnet-env.sh's framework_primary_checkout_root"
+    },
+    {
+      "path": "tools/tests/test_doctor_sh.py",
+      "search": "`SR6_CORE_PDF`",
+      "replace": "`FIXTURE_SOURCE_PDF`"
+    },
+    {
+      "path": "tools/tests/test_doctor_sh.py",
+      "search": "prefix=\"{{SOURCE_PREFIX_LOWER}}-doctor-\"",
+      "replace": "prefix=\"framework-doctor-\""
+    },
+    {
+      "path": "tools/tests/test_doctor_sh.py",
+      "search": "\"sourceId\": \"sr6-core\"",
+      "replace": "\"sourceId\": \"fixture-core\""
+    },
+    {
+      "path": "tools/tests/test_doctor_sh.py",
+      "search": "\"envVar\": \"SR6_CORE_PDF\"",
+      "replace": "\"envVar\": \"FIXTURE_SOURCE_PDF\""
+    },
+    {
+      "path": "tools/tests/test_doctor_sh.py",
+      "search": "env.pop(\"SR6_CORE_PDF\", None)",
+      "replace": "env.pop(\"FIXTURE_SOURCE_PDF\", None)"
+    },
+    {
+      "path": "tools/tests/test_doctor_sh.py",
+      "search": "json.dumps({\"sr6-core\": pdf_path})",
+      "replace": "json.dumps({\"fixture-core\": pdf_path})"
+    },
+    {
+      "path": "tools/tests/test_doctor_sh.py",
+      "search": "    def test_hint_names_the_primary_checkout_path_when_unconfigured(self):\n        \"\"\"The create-it hint must point at a real, reachable path, not \"next to me\".\"\"\"\n        worktree_report = self._authoritative_source_section(self.worktree)\n        self.assertIn(str(self.primary / \"source.local.json\"), worktree_report)\n",
+      "replace": "    def test_hint_names_the_primary_checkout_path_when_unconfigured(self):\n        \"\"\"The create-it hint must point at a real, reachable path, not \"next to me\".\"\"\"\n        worktree_report = self._authoritative_source_section(self.worktree)\n        self.assertIn(str(self.primary / \"source.local.json\"), worktree_report)\n\n    def test_missing_manifest_is_a_valid_unconfigured_framework_state(self):\n        \"\"\"A bare framework has no ruleset source manifest yet; doctor must accept that.\"\"\"\n        paths = [\n            self.primary / \".github\" / \"source-manifest.json\",\n            self.worktree / \".github\" / \"source-manifest.json\",\n        ]\n        contents = [path.read_text(encoding=\"utf-8\") for path in paths]\n        try:\n            for path in paths:\n                path.unlink()\n            for checkout in (self.primary, self.worktree):\n                report = self._authoritative_source_section(checkout)\n                self.assertIn(\"none declared\", report)\n                self.assertNotIn(\"FAIL\", report)\n        finally:\n            for path, content in zip(paths, contents):\n                path.write_text(content, encoding=\"utf-8\")\n"
+    },
+    {
+      "path": "tools/new-issue.sh",
+      "search": "<!-- RULES WORK: SR6 Core / <section> / printed p. X / PDF p. Y",
+      "replace": "<!-- RULES WORK: <sourceId> / <section> / printed p. X / PDF p. Y"
+    },
+    {
+      "path": "tools/new-issue.sh",
+      "search": "         SR6 Core / Tests / printed pp. 35-36 / PDF pp. 36-37",
+      "replace": "         core-rules / Tests / printed pp. 35-36 / PDF pp. 36-37"
+    },
+    {
+      "path": "tools/new-issue.sh",
+      "search": "<!-- What must be demonstrated, and how. Where the book prints a finite table, the whole",
+      "replace": "<!-- What must be demonstrated, and how. Where the authoritative source prints a finite table, the whole"
+    },
+    {
+      "path": "tools/tests/test_new_issue.py",
+      "search": "SR6 Core / Glitches / printed p. 44 / PDF p. 45",
+      "replace": "fixture-core / Glitches / printed p. 44 / PDF p. 45"
     }
   ]
 }

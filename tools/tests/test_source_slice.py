@@ -44,7 +44,7 @@ class SourceSliceTests(unittest.TestCase):
     """Each test gets its own tmp source + tmp manifest; nothing touches the real ones."""
 
     def setUp(self) -> None:
-        self.tmp = Path(tempfile.mkdtemp(prefix="deckard-slice-"))
+        self.tmp = Path(tempfile.mkdtemp(prefix="framework-source-"))
         self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
 
         self.pdf = self.tmp / "fixture.pdf"
@@ -60,14 +60,14 @@ class SourceSliceTests(unittest.TestCase):
                     "schemaVersion": 1,
                     "sources": [
                         {
-                            "sourceId": "sr6-core",
+                            "sourceId": "fixture-core",
                             "authority": 1,
                             "title": "Fixture Book",
                             "edition": "Fixture Edition",
                             "sha256": sha,
                             "pdfPageCount": page_count,
                             "pageNumbering": {"printedPageEqualsPdfPageMinus": offset},
-                            "envVar": "SR6_CORE_PDF",
+                            "envVar": "FIXTURE_SOURCE_PDF",
                         }
                     ],
                 }
@@ -78,11 +78,11 @@ class SourceSliceTests(unittest.TestCase):
 
     def run_tool(self, *args: str, source: str | None = "", manifest: Path | None = None):
         env = dict(os.environ)
-        env["DECKARD_SOURCE_MANIFEST"] = str(manifest or self.manifest)
-        env["DECKARD_ALLOW_TEST_MANIFEST"] = "1"
-        env["SR6_CORE_PDF"] = str(self.pdf) if source == "" else (source or "")
-        if not env["SR6_CORE_PDF"]:
-            env.pop("SR6_CORE_PDF")
+        env["FRAMEWORK_SOURCE_MANIFEST"] = str(manifest or self.manifest)
+        env["FRAMEWORK_ALLOW_TEST_MANIFEST"] = "1"
+        env["FIXTURE_SOURCE_PDF"] = str(self.pdf) if source == "" else (source or "")
+        if not env["FIXTURE_SOURCE_PDF"]:
+            env.pop("FIXTURE_SOURCE_PDF")
         return subprocess.run(
             [sys.executable, str(TOOL), *args],
             capture_output=True, text=True, env=env, cwd=str(ROOT), check=False,
@@ -139,7 +139,7 @@ class SourceSliceTests(unittest.TestCase):
     @NEEDS_PDFTOTEXT
     def test_packet_header_carries_full_provenance(self):
         result = self.run_tool("--pages", "1")
-        for expected in ("sourceId        : sr6-core", "edition         : Fixture Edition",
+        for expected in ("sourceId        : fixture-core", "edition         : Fixture Edition",
                          f"sha256          : {self.sha}", "pdf pages       : 1-1"):
             self.assertIn(expected, result.stdout)
 
@@ -168,7 +168,7 @@ class SourceSliceTests(unittest.TestCase):
     def test_argv_does_not_leak_the_local_source_path(self):
         """The path is real (a tmpdir under self.tmp); only its basename may appear.
 
-        scripts/doctor.sh already refuses to print Brandon's full local path because
+        scripts/doctor.sh already refuses to print a developer's full local path because
         doctor output gets pasted into Issues -- packets get read and quoted from too,
         even though they are never committed, so the same redaction applies here.
         """
@@ -271,7 +271,7 @@ class SourceSliceTests(unittest.TestCase):
 
     @NEEDS_PDFTOTEXT
     def test_unknown_source_id_refuses(self):
-        result = self.run_tool("--pages", "1", "--source-id", "sr6-supplement")
+        result = self.run_tool("--pages", "1", "--source-id", "fixture-supplement")
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("Unknown sourceId", result.stderr)
 
@@ -373,15 +373,15 @@ class SourceSliceTests(unittest.TestCase):
     @NEEDS_PDFTOTEXT
     def test_manifest_override_requires_explicit_opt_in(self):
         env = dict(os.environ)
-        env["DECKARD_SOURCE_MANIFEST"] = str(self.manifest)
-        env.pop("DECKARD_ALLOW_TEST_MANIFEST", None)
-        env["SR6_CORE_PDF"] = str(self.pdf)
+        env["FRAMEWORK_SOURCE_MANIFEST"] = str(self.manifest)
+        env.pop("FRAMEWORK_ALLOW_TEST_MANIFEST", None)
+        env["FIXTURE_SOURCE_PDF"] = str(self.pdf)
         result = subprocess.run(
             [sys.executable, str(TOOL), "--verify-only"],
             capture_output=True, text=True, env=env, cwd=str(ROOT), check=False,
         )
         self.assertNotEqual(result.returncode, 0)
-        self.assertIn("DECKARD_ALLOW_TEST_MANIFEST", result.stderr)
+        self.assertIn("FRAMEWORK_ALLOW_TEST_MANIFEST", result.stderr)
 
     @NEEDS_PDFTOTEXT
     def test_override_packets_are_stamped_non_authoritative(self):
@@ -398,7 +398,7 @@ class SourceSliceTests(unittest.TestCase):
         """
         header = self._load_tool().build_header(
             {
-                "sourceId": "sr6-core",
+                "sourceId": "fixture-core",
                 "title": "Fixture Book",
                 "edition": "Fixture Edition",
                 "sha256": "a" * 64,
@@ -409,12 +409,12 @@ class SourceSliceTests(unittest.TestCase):
             body_sha256="b" * 64,
         )
         self.assertNotIn("NON-AUTHORITATIVE", header)
-        self.assertIn("sourceId        : sr6-core", header)
+        self.assertIn("sourceId        : fixture-core", header)
 
     def test_packets_from_a_test_manifest_are_stamped(self):
         header = self._load_tool().build_header(
             {
-                "sourceId": "sr6-core",
+                "sourceId": "fixture-core",
                 "title": "Fixture Book",
                 "edition": "Fixture Edition",
                 "sha256": "a" * 64,
@@ -426,13 +426,27 @@ class SourceSliceTests(unittest.TestCase):
         )
         self.assertIn("NON-AUTHORITATIVE", header)
 
-    def test_committed_manifest_has_the_expected_shape(self):
-        """Split out from the test above, which was named for stamping and did this."""
-        real = json.loads((ROOT / ".github" / "source-manifest.json").read_text(encoding="utf-8"))
-        entry = real["sources"][0]
-        self.assertEqual(entry["sourceId"], "sr6-core")
-        self.assertRegex(entry["sha256"], r"^[0-9a-f]{64}$")
-        self.assertGreater(entry["pdfPageCount"], 0)
+    @NEEDS_PDFTOTEXT
+    def test_multiple_source_manifest_requires_explicit_source_id(self):
+        data = json.loads(self.manifest.read_text(encoding="utf-8"))
+        second = dict(data["sources"][0])
+        second["sourceId"] = "fixture-second"
+        second["envVar"] = "FIXTURE_SECOND_PDF"
+        data["sources"].append(second)
+
+        multi = self.tmp / "multi-manifest.json"
+        multi.write_text(json.dumps(data), encoding="utf-8")
+
+        ambiguous = self.run_tool("--verify-only", manifest=multi)
+        self.assertNotEqual(ambiguous.returncode, 0)
+        self.assertIn("multiple sources", ambiguous.stderr)
+        self.assertIn("--source-id", ambiguous.stderr)
+
+        selected = self.run_tool(
+            "--verify-only", "--source-id", "fixture-core", manifest=multi
+        )
+        self.assertEqual(selected.returncode, 0, selected.stderr)
+        self.assertIn("sha256 verified", selected.stdout)
 
     @staticmethod
     def _load_tool():
@@ -455,7 +469,7 @@ class WorktreeLocalConfigTests(unittest.TestCase):
     This builds a real, independent primary checkout + linked worktree (not the one
     this test suite itself runs in) with its own copy of the real script, so resolution
     is proven against git's actual `--git-common-dir` semantics rather than assumed.
-    `SR6_CORE_PDF` is deliberately unset in every test here: this environment has it
+    `FIXTURE_SOURCE_PDF` is deliberately unset in every test here: this environment has it
     set, and slicing succeeding for that reason would prove nothing about
     `source.local.json` specifically.
     """
@@ -463,12 +477,12 @@ class WorktreeLocalConfigTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         # `resolve_source_path` deliberately skips the source.local.json fallback
-        # entirely under a test-manifest override (DECKARD_SOURCE_MANIFEST), so it
+        # entirely under a test-manifest override (FRAMEWORK_SOURCE_MANIFEST), so it
         # cannot be used here -- that would test the wrong thing. A real, uncommitted
         # `.github/source-manifest.json` is committed into the fake repo instead, so
         # `DEFAULT_MANIFEST` (resolved from each checkout's own ROOT) finds it exactly
         # as it would in the real repository, in both the primary and the worktree.
-        cls.tmp = Path(tempfile.mkdtemp(prefix="deckard-slice-worktree-"))
+        cls.tmp = Path(tempfile.mkdtemp(prefix="framework-source-worktree-"))
         cls.primary = cls.tmp / "primary"
         (cls.primary / "tools").mkdir(parents=True)
         (cls.primary / ".github").mkdir(parents=True)
@@ -485,14 +499,14 @@ class WorktreeLocalConfigTests(unittest.TestCase):
                     "schemaVersion": 1,
                     "sources": [
                         {
-                            "sourceId": "sr6-core",
+                            "sourceId": "fixture-core",
                             "authority": 1,
                             "title": "Fixture Book",
                             "edition": "Fixture Edition",
                             "sha256": sha,
                             "pdfPageCount": len(PAGES),
                             "pageNumbering": {"printedPageEqualsPdfPageMinus": 1},
-                            "envVar": "SR6_CORE_PDF",
+                            "envVar": "FIXTURE_SOURCE_PDF",
                         }
                     ],
                 }
@@ -515,9 +529,9 @@ class WorktreeLocalConfigTests(unittest.TestCase):
 
     def _run(self, script: Path, cwd: Path, *args: str):
         env = dict(os.environ)
-        env.pop("SR6_CORE_PDF", None)
-        env.pop("DECKARD_SOURCE_MANIFEST", None)
-        env.pop("DECKARD_ALLOW_TEST_MANIFEST", None)
+        env.pop("FIXTURE_SOURCE_PDF", None)
+        env.pop("FRAMEWORK_SOURCE_MANIFEST", None)
+        env.pop("FRAMEWORK_ALLOW_TEST_MANIFEST", None)
         return subprocess.run(
             [sys.executable, str(script), *args],
             capture_output=True, text=True, env=env, cwd=str(cwd), check=False,
@@ -525,7 +539,7 @@ class WorktreeLocalConfigTests(unittest.TestCase):
 
     def _write_local_config(self) -> Path:
         local_config = self.primary / "source.local.json"
-        local_config.write_text(json.dumps({"sr6-core": str(self.pdf)}), encoding="utf-8")
+        local_config.write_text(json.dumps({"fixture-core": str(self.pdf)}), encoding="utf-8")
         self.addCleanup(local_config.unlink, missing_ok=True)
         return local_config
 
@@ -556,16 +570,16 @@ class WorktreeLocalConfigTests(unittest.TestCase):
 
     def _run_with_env_var(self, script: Path, cwd: Path, pdf: Path):
         env = dict(os.environ)
-        env["SR6_CORE_PDF"] = str(pdf)
-        env.pop("DECKARD_SOURCE_MANIFEST", None)
-        env.pop("DECKARD_ALLOW_TEST_MANIFEST", None)
+        env["FIXTURE_SOURCE_PDF"] = str(pdf)
+        env.pop("FRAMEWORK_SOURCE_MANIFEST", None)
+        env.pop("FRAMEWORK_ALLOW_TEST_MANIFEST", None)
         return subprocess.run(
             [sys.executable, str(script), "--verify-only"],
             capture_output=True, text=True, env=env, cwd=str(cwd), check=False,
         )
 
     def test_env_var_still_works_unchanged_from_the_worktree(self):
-        """SR6_CORE_PDF keeps working regardless of source.local.json -- #57 is a non-goal
+        """FIXTURE_SOURCE_PDF keeps working regardless of source.local.json -- #57 is a non-goal
         for the env-var path, and this must stay true even with no source.local.json at all.
         """
         result = self._run_with_env_var(
