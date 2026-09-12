@@ -52,3 +52,16 @@ tools/review-packet.sh
 tools/rules-conformance-gate.py
 tools/source-slice.py
 tools/tests
+
+src/Deckard.Core/Deckard.Core.csproj
+src/Deckard.Core/packages.lock.json
+src/Deckard.Core/Randomness
+src/Deckard.Core/Replay
+tests/Deckard.Core.Tests/Deckard.Core.Tests.csproj
+tests/Deckard.Core.Tests/packages.lock.json
+tests/Deckard.Core.Tests/Randomness
+tests/Deckard.Core.Tests/Replay
+tests/Deckard.Testing/Deckard.Testing.csproj
+tests/Deckard.Testing/packages.lock.json
+tests/Deckard.Testing/Randomness
+tools/pcg-vectors

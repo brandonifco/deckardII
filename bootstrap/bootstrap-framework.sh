@@ -1462,7 +1462,20 @@ for relative in managed_paths:
 
     expected_bytes = rendered.encode("utf-8")
 
-    if not target.exists() or target.is_symlink() or not target.is_file():
+    if not target.exists() and not target.is_symlink():
+        if dry_run:
+            if expected_bytes == source_bytes:
+                no_effect_count += 1
+            else:
+                raw_count += 1
+            continue
+
+        conflicts.append(
+            f"{relative}: expected regular target file is missing"
+        )
+        continue
+
+    if target.is_symlink() or not target.is_file():
         conflicts.append(
             f"{relative}: expected regular target file is missing"
         )
@@ -2024,6 +2037,7 @@ phase_11_normalize()
 from __future__ import annotations
 
 import stat
+import subprocess
 import sys
 from pathlib import Path
 
@@ -2061,11 +2075,15 @@ regular_files = 0
 symlinks = 0
 executables = 0
 
-for candidate in sorted(root.rglob("*"), key=lambda p: p.as_posix()):
-    relative = candidate.relative_to(root)
+listed = subprocess.run(
+    ["git", "-C", str(root), "ls-files", "-z", "--cached", "--others", "--exclude-standard"],
+    stdout=subprocess.PIPE,
+    check=True,
+ ).stdout.split(b"\0")
 
-    if relative.parts and relative.parts[0] == ".git":
-        continue
+for raw_relative in sorted(x for x in listed if x):
+    relative = Path(raw_relative.decode("utf-8"))
+    candidate = root / relative
 
     if candidate.is_symlink():
         symlinks += 1

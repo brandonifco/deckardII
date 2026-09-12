@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Test-support code shared across the framework's test projects. This is not a
+       test project itself, carries no test framework, runs no tests, and is never shipped.
+       Production projects must not reference this non-packable test-support project. -->
+  <PropertyGroup>
+    <RootNamespace>DeckardII.Testing</RootNamespace>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../src/DeckardII.Core/DeckardII.Core.csproj" />
+  </ItemGroup>
+
+</Project>
