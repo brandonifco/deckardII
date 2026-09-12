@@ -42,7 +42,7 @@
       },
       {
         "path": "bootstrap/config/exclusion-manifest.txt",
-        "sha256": "bac763d3b1640bf0d1a802b088fccd9cbecf95161fa1cc65e05a5e3bae61a480"
+        "sha256": "2d3356c3da3e01451e2df6718e55335505ac9c48cd79a65094a7f50ee910ae9f"
       },
       {
         "path": "bootstrap/config/path-map.json",
