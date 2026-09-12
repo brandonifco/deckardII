@@ -1,0 +1,13 @@
+# Generic repository directory boundaries.
+#
+# Phase 08 creates directories only. It does not create placeholder files,
+# projects, namespaces, or rules-engine abstractions.
+#
+# One repository-relative directory per line.
+# Blank lines and lines beginning with # are ignored.
+
+docs
+docs/decisions
+src
+tests
+templates

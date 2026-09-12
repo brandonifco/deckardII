@@ -1,0 +1,29 @@
+# Paths that must not exist in the generic framework target at this stage.
+#
+# These are Deckard/ruleset-specific artifacts deliberately excluded from the
+# mechanical framework extraction.
+#
+# One repository-relative path per line.
+# Blank lines and lines beginning with # are ignored.
+
+Deckard.slnx
+
+src/Deckard.Data
+src/Deckard.Rules
+
+tests/Deckard.Data.Tests
+tests/Deckard.Rules.Tests
+
+
+.github/source-manifest.json
+
+.claude/agents/engine-dev.md
+.claude/agents/rules-conformance.md
+
+.claude/skills/rules-review
+.claude/skills/source-packet
+
+README.md
+CLAUDE.md
+AGENTS.md
+NOTICE

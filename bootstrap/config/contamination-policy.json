@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "excludeTopLevel": [
+    ".git",
+    "bootstrap"
+  ],
+  "patterns": [
+    {
+      "id": "domain-shadowrun-title",
+      "regex": "\\bShadowrun\\b"
+    },
+    {
+      "id": "domain-shadowrun-lower",
+      "regex": "\\bshadowrun\\b"
+    },
+    {
+      "id": "domain-sr6",
+      "regex": "\\bSR6\\b"
+    }
+  ]
+}

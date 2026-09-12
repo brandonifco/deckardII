@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "checks": [
+    {
+      "type": "shell-syntax",
+      "path": "bootstrap/bootstrap-framework.sh"
+    },
+    {
+      "type": "shell-syntax",
+      "path": "bootstrap/prepare-repositories.sh"
+    },
+    {
+      "type": "python-syntax",
+      "path": "bootstrap/lib/rename_engine.py"
+    },
+    {
+      "type": "python-syntax",
+      "path": "bootstrap/lib/contamination_engine.py"
+    },
+    {
+      "type": "json",
+      "path": "framework.json"
+    },
+    {
+      "type": "json",
+      "path": "bootstrap/generated/extraction-provenance.json"
+    },
+    {
+      "type": "python-unittest",
+      "path": "tools/tests/test_dotnet_env.py"
+    },
+    {
+      "type": "python-unittest",
+      "path": "tools/tests/test_primary_checkout_guard.py"
+    }
+  ]
+}

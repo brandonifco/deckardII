@@ -1,0 +1,73 @@
+{
+  "schemaVersion": 1,
+  "bootstrap": {
+    "version": "1.0.1"
+  },
+  "source": {
+    "repository": "brandonifco/deckard",
+    "configuredRef": "c8aa7e626352d05001a8fe38aed62558fe07aeee",
+    "commit": "c8aa7e626352d05001a8fe38aed62558fe07aeee",
+    "tree": "e8fb547b6724710b8f3897174defd9356a0e1694",
+    "prefix": "Deckard"
+  },
+  "target": {
+    "repository": "brandonifco/deckardII"
+  },
+  "frameworkInvocation": {
+    "id": "deckardii",
+    "name": "Deckard II",
+    "prefix": "DeckardII"
+  },
+  "recipe": {
+    "manifest": {
+      "path": "bootstrap/config/provenance-inputs.txt",
+      "sha256": "e5c345132a25e09f08366077cf52c6cd77123ecf24a61047d6da55e755e6eafb"
+    },
+    "inputs": [
+      {
+        "path": "bootstrap/bootstrap-framework.sh",
+        "sha256": "4ed9d5576653937b30c1a90081271b2fe78a479ef817a55b1d990bbf16211b14"
+      },
+      {
+        "path": "bootstrap/config/contamination-baseline.json",
+        "sha256": "19363f57b4b760f82e87a7b39e169a54477ef159d8ec4b60914fe9405a1be374"
+      },
+      {
+        "path": "bootstrap/config/contamination-policy.json",
+        "sha256": "3e1822a4599c131dc78d075be57bb9ce8c3d9bcc53877531e361a64c9595a234"
+      },
+      {
+        "path": "bootstrap/config/copy-manifest.txt",
+        "sha256": "c538f146fa2c3ff4f2d09c877795e316f4e889f5667aa95f526e545e2a88ab89"
+      },
+      {
+        "path": "bootstrap/config/exclusion-manifest.txt",
+        "sha256": "bac763d3b1640bf0d1a802b088fccd9cbecf95161fa1cc65e05a5e3bae61a480"
+      },
+      {
+        "path": "bootstrap/config/rename-map.json",
+        "sha256": "64824d24c4b01910032ac28a95061a482b93b9d8f667f8eea001831987066862"
+      },
+      {
+        "path": "bootstrap/config/structure-manifest.txt",
+        "sha256": "8204ab578e6bd4529de915a2f0730c0233d32c91e41637878f434201a15fafa2"
+      },
+      {
+        "path": "bootstrap/config/validation-manifest.json",
+        "sha256": "2ede2fb83202b51c6efde7207ec3fce8c956bbedbb9983a0fd29f05966d47b3d"
+      },
+      {
+        "path": "bootstrap/lib/contamination_engine.py",
+        "sha256": "2080da821e6be88b4e25bd68b56c56b4be59bce7cc40df6cf0cbb4214f379fb3"
+      },
+      {
+        "path": "bootstrap/lib/rename_engine.py",
+        "sha256": "63277cf56c10ee1f86e55ac915044851fffae20587aebfed99d4f5377fbbf1ea"
+      },
+      {
+        "path": "bootstrap/prepare-repositories.sh",
+        "sha256": "b72ba6a4230675558a5e5f0f4dbcccd19ca0eeb8347e3270d098875a4003508a"
+      }
+    ]
+  }
+}

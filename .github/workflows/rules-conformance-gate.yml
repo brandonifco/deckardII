@@ -1,0 +1,73 @@
+name: rules-conformance-gate
+
+# Issue #41: rules-conformance review was a claim a PR made about itself. GitHub's
+# ruleset cannot require a status check conditionally on changed paths -- a required
+# check applies to every PR on the branch, or none -- so this workflow runs on every
+# PR and decides for itself whether it has anything to check:
+#
+#   * the diff touches no rules surface (src/Deckard.Rules/, src/Deckard.Data/, their
+#     test projects, .github/source-manifest.json) -- PASS trivially. Docs and tooling
+#     work is never blocked by a review with nothing to review.
+#   * it touches one -- PASS only if tools/record-verdict.sh has recorded a verdict for
+#     THIS EXACT HEAD COMMIT (a GitHub commit status, so amending the PR -- a new SHA --
+#     leaves no verdict behind for the new code).
+#
+# All of the actual decision logic lives in tools/rules-conformance-gate.py, tested in
+# tools/tests/ without touching GitHub. This workflow is thin plumbing: resolve which PR
+# and which commit, then ask that script.
+#
+# `workflow_dispatch` exists so a verdict recorded AFTER this workflow already reported
+# failure for a commit can be re-checked without pushing an empty commit --
+# tools/record-verdict.sh --rerun-gate triggers it. A `pull_request`-triggered run
+# already re-evaluates on `synchronize`, which is what makes amending invalidate a stale
+# verdict: the new head commit has never had this workflow run against it at all until a
+# new push (or an explicit dispatch) does.
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, reopened, synchronize, ready_for_review]
+  workflow_dispatch:
+    inputs:
+      pr:
+        description: "Pull request number to re-evaluate"
+        required: true
+
+concurrency:
+  group: rules-conformance-gate-${{ github.event.pull_request.number || github.event.inputs.pr }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: read
+  issues: read
+  statuses: read
+
+jobs:
+  rules-conformance-gate:
+    # Pinned, not the rolling `ubuntu-latest` alias -- see build-and-test.yml for why
+    # tracking a moving image is avoided repo-wide (#43).
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Evaluate the gate
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number || github.event.inputs.pr }}
+          REPO: ${{ github.repository }}
+        run: |
+          tools/rules-conformance-gate.py --pr "$PR_NUMBER" --repo "$REPO" \
+            --json rules-conformance-gate-evidence.json
+
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: rules-conformance-gate-evidence
+          path: rules-conformance-gate-evidence.json
+          if-no-files-found: ignore

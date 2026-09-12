@@ -1,0 +1,53 @@
+# Explicitly approved paths copied from the configured source commit.
+#
+# Rules:
+# - One repository-relative path per line.
+# - Blank lines and lines beginning with # are ignored.
+# - Directories are copied recursively from the Git tree.
+# - No path may be absolute, contain "..", or reference .git.
+#
+# Deliberately excluded here:
+# - README.md
+# - CLAUDE.md
+# - AGENTS.md
+# - NOTICE
+# - .github/source-manifest.json
+# - docs/
+# - .claude/agents/
+# - .claude/skills/
+# - src/
+# - tests/
+#
+# Those require later semantic classification/generalization.
+
+.editorconfig
+.gitattributes
+.gitignore
+
+Directory.Build.props
+Directory.Packages.props
+global.json
+LICENSE
+
+.claude/hooks/primary-checkout-guard.py
+.claude/settings.json
+
+.github/dependabot.yml
+.github/poppler-version.json
+.github/pull_request_template.md
+.github/workflows
+
+scripts/bootstrap-dotnet.sh
+scripts/doctor.sh
+scripts/validate.sh
+scripts/lib
+
+tools/dispatch-agent.sh
+tools/new-issue.sh
+tools/pr-policy.py
+tools/record-verdict.sh
+tools/repo-checks.py
+tools/review-packet.sh
+tools/rules-conformance-gate.py
+tools/source-slice.py
+tools/tests

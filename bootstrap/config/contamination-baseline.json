@@ -1,0 +1,236 @@
+{
+  "schemaVersion": 1,
+  "policySha256": "3e1822a4599c131dc78d075be57bb9ce8c3d9bcc53877531e361a64c9595a234",
+  "counts": [
+    {
+      "path": ".editorconfig",
+      "pattern": "source-prefix-exact",
+      "count": 1
+    },
+    {
+      "path": ".github/poppler-version.json",
+      "pattern": "source-prefix-exact",
+      "count": 1
+    },
+    {
+      "path": ".github/pull_request_template.md",
+      "pattern": "domain-sr6",
+      "count": 1
+    },
+    {
+      "path": ".github/pull_request_template.md",
+      "pattern": "source-prefix-exact",
+      "count": 2
+    },
+    {
+      "path": ".github/workflows/build-and-test.yml",
+      "pattern": "source-prefix-exact",
+      "count": 2
+    },
+    {
+      "path": ".github/workflows/rules-conformance-gate.yml",
+      "pattern": "source-prefix-exact",
+      "count": 2
+    },
+    {
+      "path": ".gitignore",
+      "pattern": "domain-shadowrun-title",
+      "count": 1
+    },
+    {
+      "path": "Directory.Build.props",
+      "pattern": "source-prefix-exact",
+      "count": 1
+    },
+    {
+      "path": "scripts/bootstrap-dotnet.sh",
+      "pattern": "source-prefix-exact",
+      "count": 1
+    },
+    {
+      "path": "scripts/doctor.sh",
+      "pattern": "source-prefix-exact",
+      "count": 3
+    },
+    {
+      "path": "scripts/validate.sh",
+      "pattern": "source-prefix-exact",
+      "count": 3
+    },
+    {
+      "path": "tools/dispatch-agent.sh",
+      "pattern": "source-prefix-lower",
+      "count": 1
+    },
+    {
+      "path": "tools/new-issue.sh",
+      "pattern": "domain-sr6",
+      "count": 2
+    },
+    {
+      "path": "tools/new-issue.sh",
+      "pattern": "source-prefix-exact",
+      "count": 1
+    },
+    {
+      "path": "tools/new-issue.sh",
+      "pattern": "source-prefix-lower",
+      "count": 1
+    },
+    {
+      "path": "tools/pr-policy.py",
+      "pattern": "domain-sr6",
+      "count": 1
+    },
+    {
+      "path": "tools/record-verdict.sh",
+      "pattern": "source-prefix-lower",
+      "count": 2
+    },
+    {
+      "path": "tools/repo-checks.py",
+      "pattern": "source-prefix-exact",
+      "count": 25
+    },
+    {
+      "path": "tools/repo-checks.py",
+      "pattern": "source-prefix-lower",
+      "count": 1
+    },
+    {
+      "path": "tools/repo-checks.py",
+      "pattern": "source-prefix-upper",
+      "count": 1
+    },
+    {
+      "path": "tools/review-packet.sh",
+      "pattern": "source-prefix-exact",
+      "count": 2
+    },
+    {
+      "path": "tools/review-packet.sh",
+      "pattern": "source-prefix-upper",
+      "count": 1
+    },
+    {
+      "path": "tools/rules-conformance-gate.py",
+      "pattern": "source-prefix-exact",
+      "count": 2
+    },
+    {
+      "path": "tools/rules-conformance-gate.py",
+      "pattern": "source-prefix-lower",
+      "count": 4
+    },
+    {
+      "path": "tools/source-slice.py",
+      "pattern": "domain-sr6",
+      "count": 3
+    },
+    {
+      "path": "tools/source-slice.py",
+      "pattern": "source-prefix-exact",
+      "count": 1
+    },
+    {
+      "path": "tools/source-slice.py",
+      "pattern": "source-prefix-upper",
+      "count": 1
+    },
+    {
+      "path": "tools/tests/test_dispatch_agent.py",
+      "pattern": "source-prefix-exact",
+      "count": 1
+    },
+    {
+      "path": "tools/tests/test_dispatch_agent.py",
+      "pattern": "source-prefix-lower",
+      "count": 1
+    },
+    {
+      "path": "tools/tests/test_doctor_sh.py",
+      "pattern": "source-prefix-lower",
+      "count": 1
+    },
+    {
+      "path": "tools/tests/test_new_issue.py",
+      "pattern": "domain-sr6",
+      "count": 1
+    },
+    {
+      "path": "tools/tests/test_new_issue.py",
+      "pattern": "source-prefix-lower",
+      "count": 1
+    },
+    {
+      "path": "tools/tests/test_pr_policy.py",
+      "pattern": "domain-shadowrun-title",
+      "count": 4
+    },
+    {
+      "path": "tools/tests/test_pr_policy.py",
+      "pattern": "domain-sr6",
+      "count": 4
+    },
+    {
+      "path": "tools/tests/test_pr_policy.py",
+      "pattern": "source-prefix-exact",
+      "count": 29
+    },
+    {
+      "path": "tools/tests/test_pr_policy.py",
+      "pattern": "source-prefix-lower",
+      "count": 2
+    },
+    {
+      "path": "tools/tests/test_record_verdict.py",
+      "pattern": "source-prefix-lower",
+      "count": 8
+    },
+    {
+      "path": "tools/tests/test_repo_checks.py",
+      "pattern": "source-prefix-exact",
+      "count": 55
+    },
+    {
+      "path": "tools/tests/test_repo_checks.py",
+      "pattern": "source-prefix-lower",
+      "count": 2
+    },
+    {
+      "path": "tools/tests/test_repo_checks.py",
+      "pattern": "source-prefix-upper",
+      "count": 5
+    },
+    {
+      "path": "tools/tests/test_review_packet.py",
+      "pattern": "domain-sr6",
+      "count": 2
+    },
+    {
+      "path": "tools/tests/test_review_packet.py",
+      "pattern": "source-prefix-exact",
+      "count": 22
+    },
+    {
+      "path": "tools/tests/test_review_packet.py",
+      "pattern": "source-prefix-lower",
+      "count": 1
+    },
+    {
+      "path": "tools/tests/test_rules_conformance_gate.py",
+      "pattern": "source-prefix-exact",
+      "count": 25
+    },
+    {
+      "path": "tools/tests/test_rules_conformance_gate.py",
+      "pattern": "source-prefix-lower",
+      "count": 4
+    },
+    {
+      "path": "tools/tests/test_source_slice.py",
+      "pattern": "source-prefix-lower",
+      "count": 2
+    }
+  ]
+}

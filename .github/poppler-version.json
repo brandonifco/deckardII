@@ -1,0 +1,9 @@
+{
+  "_comment": [
+    "Single source of truth for the poppler-utils (pdftotext) version CI pins and",
+    "scripts/doctor.sh compares a local install against. See docs/source-handling.md",
+    "for what this pin can and cannot guarantee -- Deckard does not vendor Poppler.",
+    "The value is what `pdftotext -v` itself reports, not the distro package revision."
+  ],
+  "pdftotext": "24.02.0"
+}

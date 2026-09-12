@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "rules": [
+    {
+      "path": "Directory.Build.props",
+      "search": "<RootNamespaceBase>{{SOURCE_PREFIX}}</RootNamespaceBase>",
+      "replace": "<RootNamespaceBase>{{FRAMEWORK_PREFIX}}</RootNamespaceBase>"
+    },
+    {
+      "path": "Directory.Build.props",
+      "search": "<Product>{{SOURCE_PREFIX}}</Product>",
+      "replace": "<Product>{{FRAMEWORK_NAME}}</Product>"
+    },
+    {
+      "path": "Directory.Build.props",
+      "search": "<RepositoryUrl>https://github.com/{{SOURCE_REPO}}</RepositoryUrl>",
+      "replace": "<RepositoryUrl>https://github.com/{{TARGET_REPO}}</RepositoryUrl>"
+    },
+
+    {
+      "path": "scripts/lib/dotnet-env.sh",
+      "search": "{{SOURCE_PREFIX_UPPER}}_",
+      "replace": "{{FRAMEWORK_PREFIX_UPPER}}_"
+    },
+    {
+      "path": "scripts/lib/dotnet-env.sh",
+      "search": "{{SOURCE_PREFIX_LOWER}}_",
+      "replace": "{{FRAMEWORK_PREFIX_LOWER}}_"
+    },
+
+    {
+      "path": "tools/tests/test_dotnet_env.py",
+      "search": "{{SOURCE_PREFIX_UPPER}}_",
+      "replace": "{{FRAMEWORK_PREFIX_UPPER}}_"
+    },
+    {
+      "path": "tools/tests/test_dotnet_env.py",
+      "search": "{{SOURCE_PREFIX_LOWER}}-",
+      "replace": "{{FRAMEWORK_ID}}-"
+    },
+
+    {
+      "path": ".claude/hooks/primary-checkout-guard.py",
+      "search": "{{SOURCE_PREFIX_UPPER}}_",
+      "replace": "{{FRAMEWORK_PREFIX_UPPER}}_"
+    },
+    {
+      "path": "tools/tests/test_primary_checkout_guard.py",
+      "search": "{{SOURCE_PREFIX_UPPER}}_",
+      "replace": "{{FRAMEWORK_PREFIX_UPPER}}_"
+    },
+    {
+      "path": "tools/tests/test_primary_checkout_guard.py",
+      "search": "{{SOURCE_PREFIX_LOWER}}",
+      "replace": "{{FRAMEWORK_ID}}"
+    }
+  ]
+}

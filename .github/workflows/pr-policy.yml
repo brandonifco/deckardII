@@ -1,0 +1,47 @@
+name: pr-policy
+
+# Checks the small set of PR facts worth enforcing mechanically: exactly one linked
+# Issue, the required sections filled in, real evidence rather than "tests pass", and a
+# source locator whenever rules files changed.
+#
+# `edited` is included deliberately -- the usual fix for a policy failure is editing the
+# PR body, which produces no new commit and would otherwise never re-run the check.
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, edited, reopened, synchronize, ready_for_review]
+
+concurrency:
+  group: pr-policy-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: read
+  issues: read
+
+jobs:
+  pr-policy:
+    # Pinned, not the rolling `ubuntu-latest` alias -- see build-and-test.yml for why
+    # tracking a moving image is avoided repo-wide (#43). This job only runs a Python
+    # policy check against the GitHub API, so the pin is about not silently changing
+    # the OS/Python this runs on, not about a build toolchain living on the image.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Check PR policy
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: tools/pr-policy.py --pr "${{ github.event.pull_request.number }}" --json pr-policy-evidence.json
+
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: pr-policy-evidence
+          path: pr-policy-evidence.json
+          if-no-files-found: ignore

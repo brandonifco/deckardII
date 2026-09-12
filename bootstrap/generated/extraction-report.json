@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "status": "bootstrap-extraction-complete",
+  "bootstrapVersion": "1.0.1",
+  "framework": {
+    "id": "deckardii",
+    "name": "Deckard II",
+    "prefix": "DeckardII",
+    "repository": "brandonifco/deckardII"
+  },
+  "source": {
+    "repository": "brandonifco/deckard",
+    "commit": "c8aa7e626352d05001a8fe38aed62558fe07aeee",
+    "tree": "e8fb547b6724710b8f3897174defd9356a0e1694"
+  },
+  "extraction": {
+    "approvedManifestEntries": 26,
+    "approvedTrackedFiles": 39,
+    "mechanicallyTransformedFiles": 5,
+    "declaredStructureDirectories": 5
+  },
+  "knownContaminationDebt": {
+    "occurrences": 237,
+    "buckets": 46
+  },
+  "validation": {
+    "declaredChecks": 8
+  }
+}

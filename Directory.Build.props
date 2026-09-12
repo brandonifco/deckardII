@@ -1,0 +1,35 @@
+<Project>
+
+  <!-- Repo-wide defaults. Deckard is a deterministic rules engine: reproducibility
+       and zero-warning builds are load-bearing, not stylistic. See docs/architecture.md. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <WarningsAsErrors />
+    <AnalysisLevel>latest</AnalysisLevel>
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <Deterministic>true</Deterministic>
+    <ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <NoWarn />
+    <!-- Each project restores from its own committed packages.lock.json rather than
+         letting NuGet re-resolve transitive versions on every restore. validate.sh
+         restores in locked mode, which fails the build the moment resolution would
+         differ from the committed lock file, instead of drifting silently (#43). See
+         docs/architecture.md, "Dependency resolution and build reconstruction", for the
+         regeneration command and what this does and does not promise. -->
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <RootNamespaceBase>DeckardII</RootNamespaceBase>
+    <Authors>Brandon</Authors>
+    <Product>Deckard II</Product>
+    <RepositoryUrl>https://github.com/brandonifco/deckardII</RepositoryUrl>
+  </PropertyGroup>
+
+</Project>

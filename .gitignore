@@ -1,0 +1,45 @@
+# ---------------------------------------------------------------------------
+# AUTHORITATIVE SOURCE BOUNDARY — see docs/source-handling.md
+# The Shadowrun Sixth World core rulebook is commercial copyrighted material.
+# It is NEVER committed, and neither is any extracted text from it.
+# ---------------------------------------------------------------------------
+*.pdf
+*.epub
+*.mobi
+.env
+.env.*
+!.env.example
+source.local.json
+*.local.json
+/source-packets/
+*.packet.txt
+*-source-packet*.txt
+
+# Build output
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+artifacts/
+TestResults/
+*.user
+*.suo
+.vs/
+.vscode/
+.idea/
+
+# Repo-local .NET SDK -- installed by scripts/bootstrap-dotnet.sh into the primary
+# checkout only. Large, and `git clean -xfd` removes it; rerun the script to restore it.
+/.dotnet/
+
+# Agent scratch — worktrees live OUTSIDE this repo (see tools/dispatch-agent.sh)
+/tmp/
+/worktrees/
+.claude/worktrees/
+.claude/settings.local.json
+
+# Tooling
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/

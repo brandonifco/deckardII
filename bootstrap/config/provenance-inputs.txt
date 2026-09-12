@@ -1,0 +1,19 @@
+# Files whose exact contents define the extraction recipe.
+#
+# Phase 10 records a SHA-256 digest for each declared file. The manifest itself
+# is also hashed separately, so changing this list changes provenance.
+#
+# One repository-relative regular file per line.
+# Blank lines and lines beginning with # are ignored.
+
+bootstrap/bootstrap-framework.sh
+bootstrap/prepare-repositories.sh
+bootstrap/lib/rename_engine.py
+bootstrap/config/copy-manifest.txt
+bootstrap/config/exclusion-manifest.txt
+bootstrap/config/rename-map.json
+bootstrap/config/structure-manifest.txt
+bootstrap/lib/contamination_engine.py
+bootstrap/config/contamination-policy.json
+bootstrap/config/contamination-baseline.json
+bootstrap/config/validation-manifest.json

@@ -1,0 +1,28 @@
+version: 2
+
+# Grouped and monthly on purpose. A stream of single-package PRs on a repository with
+# three dependencies trains everyone to merge dependency updates without reading them,
+# which is worse than updating less often and actually looking.
+
+updates:
+  - package-ecosystem: nuget
+    directory: "/"
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 3
+    groups:
+      test-dependencies:
+        patterns: ["*"]
+    commit-message:
+      prefix: "deps"
+
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 2
+    groups:
+      actions:
+        patterns: ["*"]
+    commit-message:
+      prefix: "ci"
