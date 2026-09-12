@@ -19,6 +19,10 @@
     },
     {
       "type": "json",
+      "path": "bootstrap/config/path-map.json"
+    },
+    {
+      "type": "json",
       "path": "framework.json"
     },
     {
@@ -32,6 +36,14 @@
     {
       "type": "python-unittest",
       "path": "tools/tests/test_primary_checkout_guard.py"
+    },
+    {
+      "type": "python-syntax",
+      "path": "bootstrap/lib/path_map_engine.py"
+    },
+    {
+      "type": "python-unittest",
+      "path": "tools/tests/test_path_map_engine.py"
     }
   ]
 }

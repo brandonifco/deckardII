@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "status": "bootstrap-extraction-complete",
-  "bootstrapVersion": "1.0.1",
+  "bootstrapVersion": "1.0.2",
   "framework": {
     "id": "deckardii",
     "name": "Deckard II",
@@ -17,6 +17,7 @@
     "approvedManifestEntries": 27,
     "approvedTrackedFiles": 40,
     "mechanicallyTransformedFiles": 29,
+    "declaredPathMappings": 6,
     "declaredStructureDirectories": 5
   },
   "knownContaminationDebt": {
@@ -24,6 +25,6 @@
     "buckets": 5
   },
   "validation": {
-    "declaredChecks": 8
+    "declaredChecks": 11
   }
 }

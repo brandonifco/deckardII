@@ -9,7 +9,9 @@
 bootstrap/bootstrap-framework.sh
 bootstrap/prepare-repositories.sh
 bootstrap/lib/rename_engine.py
+bootstrap/lib/path_map_engine.py
 bootstrap/config/copy-manifest.txt
+bootstrap/config/path-map.json
 bootstrap/config/exclusion-manifest.txt
 bootstrap/config/rename-map.json
 bootstrap/config/structure-manifest.txt

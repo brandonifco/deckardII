@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "rules": [
+    {
+      "source": "src/{{SOURCE_PREFIX}}.Core",
+      "target": "src/{{FRAMEWORK_PREFIX}}.Core"
+    },
+    {
+      "source": "src/{{SOURCE_PREFIX}}.Core/{{SOURCE_PREFIX}}.Core.csproj",
+      "target": "src/{{FRAMEWORK_PREFIX}}.Core/{{FRAMEWORK_PREFIX}}.Core.csproj"
+    },
+    {
+      "source": "tests/{{SOURCE_PREFIX}}.Core.Tests",
+      "target": "tests/{{FRAMEWORK_PREFIX}}.Core.Tests"
+    },
+    {
+      "source": "tests/{{SOURCE_PREFIX}}.Core.Tests/{{SOURCE_PREFIX}}.Core.Tests.csproj",
+      "target": "tests/{{FRAMEWORK_PREFIX}}.Core.Tests/{{FRAMEWORK_PREFIX}}.Core.Tests.csproj"
+    },
+    {
+      "source": "tests/{{SOURCE_PREFIX}}.Testing",
+      "target": "tests/{{FRAMEWORK_PREFIX}}.Testing"
+    },
+    {
+      "source": "tests/{{SOURCE_PREFIX}}.Testing/{{SOURCE_PREFIX}}.Testing.csproj",
+      "target": "tests/{{FRAMEWORK_PREFIX}}.Testing/{{FRAMEWORK_PREFIX}}.Testing.csproj"
+    }
+  ]
+}

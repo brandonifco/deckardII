@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "bootstrap": {
-    "version": "1.0.1"
+    "version": "1.0.2"
   },
   "source": {
     "repository": "brandonifco/deckard",
@@ -21,12 +21,12 @@
   "recipe": {
     "manifest": {
       "path": "bootstrap/config/provenance-inputs.txt",
-      "sha256": "e5c345132a25e09f08366077cf52c6cd77123ecf24a61047d6da55e755e6eafb"
+      "sha256": "f6ceca3aca57143ce79705ae6ca6b1bee81187e306656b08d5170d5e9551ae3d"
     },
     "inputs": [
       {
         "path": "bootstrap/bootstrap-framework.sh",
-        "sha256": "4ed9d5576653937b30c1a90081271b2fe78a479ef817a55b1d990bbf16211b14"
+        "sha256": "d61effc0758ec336cc6ea21b258481db239c232951918e77983f46d84d2af85d"
       },
       {
         "path": "bootstrap/config/contamination-baseline.json",
@@ -45,6 +45,10 @@
         "sha256": "bac763d3b1640bf0d1a802b088fccd9cbecf95161fa1cc65e05a5e3bae61a480"
       },
       {
+        "path": "bootstrap/config/path-map.json",
+        "sha256": "9a6bf7921bb3f0431deca201a830303990fbb281f9434813430d448a1ea9e67e"
+      },
+      {
         "path": "bootstrap/config/rename-map.json",
         "sha256": "48241c98f4c00182f405d5da7ccde2917a7c72115232f3d2bedc805bdc030d25"
       },
@@ -54,11 +58,15 @@
       },
       {
         "path": "bootstrap/config/validation-manifest.json",
-        "sha256": "2ede2fb83202b51c6efde7207ec3fce8c956bbedbb9983a0fd29f05966d47b3d"
+        "sha256": "19e07334cb95abcb35dd349a3adc4b94a00af784367eecce55eed08e978fdf66"
       },
       {
         "path": "bootstrap/lib/contamination_engine.py",
         "sha256": "2080da821e6be88b4e25bd68b56c56b4be59bce7cc40df6cf0cbb4214f379fb3"
+      },
+      {
+        "path": "bootstrap/lib/path_map_engine.py",
+        "sha256": "1dbe215d3649d9299fba887aebb1f4dececb503407f8f7c3298357615b77d12f"
       },
       {
         "path": "bootstrap/lib/rename_engine.py",

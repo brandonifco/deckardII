@@ -22,7 +22,7 @@ IFS=$'\n\t'
 # 00 — Runtime, configuration, logging, CLI
 ###############################################################################
 
-readonly SCRIPT_VERSION="1.0.1"
+readonly SCRIPT_VERSION="1.0.2"
 
 SOURCE_DIR=""
 SOURCE_REPO=""
@@ -792,6 +792,8 @@ phase_05_copy_content()
     local manifest
     local rename_map
     local rename_engine
+    local path_map
+    local path_map_engine
     local staging_dir
     local entry
 
@@ -809,6 +811,8 @@ phase_05_copy_content()
     manifest="${target_resolved}/bootstrap/config/copy-manifest.txt"
     rename_map="${target_resolved}/bootstrap/config/rename-map.json"
     rename_engine="${target_resolved}/bootstrap/lib/rename_engine.py"
+    path_map="${target_resolved}/bootstrap/config/path-map.json"
+    path_map_engine="${target_resolved}/bootstrap/lib/path_map_engine.py"
 
     if [[ ! -f "${manifest}" ]]; then
         die "Copy manifest does not exist: ${manifest}"
@@ -822,6 +826,16 @@ phase_05_copy_content()
 
     if [[ ! -f "${rename_engine}" ]]; then
         die "Rename engine does not exist: ${rename_engine}"
+        return 1
+    fi
+
+    if [[ ! -f "${path_map}" ]]; then
+        die "Path map does not exist: ${path_map}"
+        return 1
+    fi
+
+    if [[ ! -f "${path_map_engine}" ]]; then
+        die "Path-map engine does not exist: ${path_map_engine}"
         return 1
     fi
 
@@ -878,6 +892,8 @@ phase_05_copy_content()
         "${DRY_RUN}" \
         "${rename_map}" \
         "${rename_engine}" \
+        "${path_map}" \
+        "${path_map_engine}" \
         "${SOURCE_PREFIX}" \
         "${FRAMEWORK_PREFIX}" \
         "${FRAMEWORK_ID}" \
@@ -900,13 +916,15 @@ target = Path(sys.argv[2])
 dry_run = sys.argv[3].lower() == "true"
 rename_map_path = Path(sys.argv[4])
 rename_engine_path = Path(sys.argv[5])
+path_map_path = Path(sys.argv[6])
+path_map_engine_path = Path(sys.argv[7])
 
-source_prefix = sys.argv[6]
-framework_prefix = sys.argv[7]
-framework_id = sys.argv[8]
-framework_name = sys.argv[9]
-source_repo = sys.argv[10]
-target_repo = sys.argv[11]
+source_prefix = sys.argv[8]
+framework_prefix = sys.argv[9]
+framework_id = sys.argv[10]
+framework_name = sys.argv[11]
+source_repo = sys.argv[12]
+target_repo = sys.argv[13]
 
 spec = importlib.util.spec_from_file_location(
     "framework_rename_engine",
@@ -919,7 +937,21 @@ if spec is None or spec.loader is None:
 rename_engine = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(rename_engine)
 
+sys.path.insert(0, str(path_map_engine_path.parent))
+path_spec = importlib.util.spec_from_file_location(
+    "framework_path_map_engine",
+    path_map_engine_path,
+)
+
+if path_spec is None or path_spec.loader is None:
+    raise SystemExit("Unable to load path-map engine.")
+
+path_map_engine = importlib.util.module_from_spec(path_spec)
+sys.modules[path_spec.name] = path_map_engine
+path_spec.loader.exec_module(path_map_engine)
+
 rename_data = rename_engine.load_map(rename_map_path)
+path_map_data = path_map_engine.load_map(path_map_path)
 
 values = rename_engine.build_values(
     SimpleNamespace(
@@ -933,6 +965,20 @@ values = rename_engine.build_values(
 )
 
 managed = set(rename_engine.managed_paths(rename_data))
+path_rules = path_map_engine.render_rules(path_map_data, values)
+
+stage_relative_paths = [
+    candidate.relative_to(stage).as_posix()
+    for candidate in sorted(stage.rglob("*"), key=lambda p: p.as_posix())
+]
+
+try:
+    mapped_paths = path_map_engine.map_paths(
+        stage_relative_paths,
+        path_rules,
+    )
+except ValueError as exc:
+    raise SystemExit(f"Path-map validation failed: {exc}") from exc
 
 copied = 0
 unchanged_raw = 0
@@ -942,7 +988,8 @@ conflicts: list[str] = []
 for source in sorted(stage.rglob("*"), key=lambda p: p.as_posix()):
     relative_path = source.relative_to(stage)
     relative = relative_path.as_posix()
-    destination = target / relative_path
+    target_relative = mapped_paths[relative]
+    destination = target / target_relative
 
     if source.is_dir() and not source.is_symlink():
         if destination.exists() and not destination.is_dir():
@@ -1154,6 +1201,8 @@ phase_07_apply_renames()
     local copy_manifest
     local rename_map
     local rename_engine
+    local path_map
+    local path_map_engine
 
     phase "07 — Apply declared mechanical transformations"
 
@@ -1167,6 +1216,8 @@ phase_07_apply_renames()
     copy_manifest="${target_resolved}/bootstrap/config/copy-manifest.txt"
     rename_map="${target_resolved}/bootstrap/config/rename-map.json"
     rename_engine="${target_resolved}/bootstrap/lib/rename_engine.py"
+    path_map="${target_resolved}/bootstrap/config/path-map.json"
+    path_map_engine="${target_resolved}/bootstrap/lib/path_map_engine.py"
 
     if [[ ! -f "${copy_manifest}" ]]; then
         die "Copy manifest does not exist: ${copy_manifest}"
@@ -1183,6 +1234,16 @@ phase_07_apply_renames()
         return 1
     fi
 
+    if [[ ! -f "${path_map}" ]]; then
+        die "Path map does not exist: ${path_map}"
+        return 1
+    fi
+
+    if [[ ! -f "${path_map_engine}" ]]; then
+        die "Path-map engine does not exist: ${path_map_engine}"
+        return 1
+    fi
+
     if ! python3 - \
         "${source_resolved}" \
         "${source_commit}" \
@@ -1190,6 +1251,8 @@ phase_07_apply_renames()
         "${copy_manifest}" \
         "${rename_map}" \
         "${rename_engine}" \
+        "${path_map}" \
+        "${path_map_engine}" \
         "${SOURCE_PREFIX}" \
         "${FRAMEWORK_PREFIX}" \
         "${FRAMEWORK_ID}" \
@@ -1214,14 +1277,16 @@ target_root = Path(sys.argv[3])
 copy_manifest_path = Path(sys.argv[4])
 rename_map_path = Path(sys.argv[5])
 rename_engine_path = Path(sys.argv[6])
+path_map_path = Path(sys.argv[7])
+path_map_engine_path = Path(sys.argv[8])
 
-source_prefix = sys.argv[7]
-framework_prefix = sys.argv[8]
-framework_id = sys.argv[9]
-framework_name = sys.argv[10]
-source_repo = sys.argv[11]
-target_repo = sys.argv[12]
-dry_run = sys.argv[13].lower() == "true"
+source_prefix = sys.argv[9]
+framework_prefix = sys.argv[10]
+framework_id = sys.argv[11]
+framework_name = sys.argv[12]
+source_repo = sys.argv[13]
+target_repo = sys.argv[14]
+dry_run = sys.argv[15].lower() == "true"
 
 
 def fail(message: str) -> None:
@@ -1240,8 +1305,22 @@ if spec is None or spec.loader is None:
 rename_engine = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(rename_engine)
 
+sys.path.insert(0, str(path_map_engine_path.parent))
+path_spec = importlib.util.spec_from_file_location(
+    "framework_path_map_engine",
+    path_map_engine_path,
+)
+
+if path_spec is None or path_spec.loader is None:
+    fail("Unable to load path-map engine.")
+
+path_map_engine = importlib.util.module_from_spec(path_spec)
+sys.modules[path_spec.name] = path_map_engine
+path_spec.loader.exec_module(path_map_engine)
+
 try:
     rename_data = rename_engine.load_map(rename_map_path)
+    path_map_data = path_map_engine.load_map(path_map_path)
 except ValueError as exc:
     fail(str(exc))
 
@@ -1260,6 +1339,15 @@ managed_paths = rename_engine.managed_paths(rename_data)
 
 if not managed_paths:
     fail("Rename map contains no managed paths.")
+
+try:
+    path_rules = path_map_engine.render_rules(path_map_data, values)
+    mapped_managed_paths = path_map_engine.map_paths(
+        managed_paths,
+        path_rules,
+    )
+except ValueError as exc:
+    fail(str(exc))
 
 approved_entries: list[str] = []
 
@@ -1288,7 +1376,8 @@ changed_count = 0
 conflicts: list[str] = []
 
 for relative in managed_paths:
-    target = target_root / relative
+    target_relative = mapped_managed_paths[relative]
+    target = target_root / target_relative
 
     blob = subprocess.run(
         [
@@ -2345,6 +2434,7 @@ destination = Path(sys.argv[12])
 
 copy_manifest = target_root / "bootstrap/config/copy-manifest.txt"
 rename_map = target_root / "bootstrap/config/rename-map.json"
+path_map = target_root / "bootstrap/config/path-map.json"
 structure_manifest = target_root / "bootstrap/config/structure-manifest.txt"
 contamination_baseline = (
     target_root / "bootstrap/config/contamination-baseline.json"
@@ -2416,6 +2506,9 @@ try:
     rename_document = json.loads(
         rename_map.read_text(encoding="utf-8")
     )
+    path_map_document = json.loads(
+        path_map.read_text(encoding="utf-8")
+    )
     contamination_document = json.loads(
         contamination_baseline.read_text(encoding="utf-8")
     )
@@ -2441,6 +2534,11 @@ managed_paths = sorted(
 
 if len(managed_paths) == 0 and len(rename_rules) != 0:
     fail("unable to derive transform-managed paths")
+
+path_rules = path_map_document.get("rules")
+
+if not isinstance(path_rules, list):
+    fail("path map rules must be a list")
 
 structure_entries = manifest_entries(structure_manifest)
 
@@ -2485,6 +2583,7 @@ document = {
         "approvedManifestEntries": len(approved_paths),
         "approvedTrackedFiles": len(approved_files),
         "mechanicallyTransformedFiles": len(managed_paths),
+        "declaredPathMappings": len(path_rules),
         "declaredStructureDirectories": len(structure_entries),
     },
     "knownContaminationDebt": {
